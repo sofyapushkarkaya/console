@@ -15,7 +15,7 @@ public class InMemoryStatementRepository implements StatementRepository {
         if (!hasNext()) {
             return null;
         }
-        return statements.get(currentIndex++);
+        return statements.get(currentIndex++); //берет по индексу из списка и только потом увеличивает счетчик
     }
 
     public boolean hasNext() {
