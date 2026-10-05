@@ -26,7 +26,7 @@ public class BelieveGameTest {
         game.start();
 
         assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Верно! Это правда.")));
+                .anyMatch(s -> s.contains("Верно! Это правда.")));//проверка содержания определенной строки в выводе
     }
 
     @Test
