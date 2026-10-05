@@ -4,6 +4,10 @@ import model.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+//нужен чтобы если тесту нужен определнный факт (правдивый/ложный), то не подгадывать
+//под список, он может менятся, перемешиваться, высылать факты рандомно, а для тестов
+//нужен заранее известный факт
+
 public class FakeStatementRepository implements StatementRepository {
     private final List<Statement> statements = new ArrayList<>();
     private int index = 0;
