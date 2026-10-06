@@ -18,7 +18,7 @@ public class BelieveGameTest {
     }
 
     @Test
-    public void testCorrectAnswerTrue() {
+    public void testCorrectAnswerTrue() { //если факт правдивый и ты пишешь "верю"-> "это правда"
         repository.addStatement(new Statement("Небо синее", true, "Релеевское рассеяние"));
         view.addInput("верю");
         view.addInput("\\exit");
@@ -30,7 +30,7 @@ public class BelieveGameTest {
     }
 
     @Test
-    public void testIncorrectAnswerFalse() {
+    public void testIncorrectAnswerFalse() { //если факт ложный и ты пишешь "верю" -> "неверно"
         repository.addStatement(new Statement("Земля плоская", false, "Она круглая"));
         view.addInput("верю");
         view.addInput("\\exit");
@@ -42,7 +42,7 @@ public class BelieveGameTest {
     }
 
     @Test
-    public void testCorrectAnswerNotBelieve() {
+    public void testCorrectAnswerNotBelieve() { //если факт ложный и ты пишешь "не верю" -> "верно.это ложь"
         repository.addStatement(new Statement("Земля плоская", false, "Она круглая"));
         view.addInput("не верю");
         view.addInput("\\exit");
@@ -83,7 +83,7 @@ public class BelieveGameTest {
     }
 
     @Test
-    public void testExitCommand() {
+    public void testExitCommand() { //тест что команда "exit" завершает работу
         repository.addStatement(new Statement("Тест", true, "Пояснение"));
         view.addInput("\\exit");
 
