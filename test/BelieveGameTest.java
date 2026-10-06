@@ -1,3 +1,5 @@
+
+
 import logic.BelieveGame;
 import model.Statement;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +20,7 @@ public class BelieveGameTest {
     }
 
     @Test
-    public void testCorrectAnswerTrue() { //если факт правдивый и ты пишешь "верю"-> "это правда"
+    public void testCorrectAnswerTrue() {
         repository.addStatement(new Statement("Небо синее", true, "Релеевское рассеяние"));
         view.addInput("верю");
         view.addInput("\\exit");
@@ -26,11 +28,11 @@ public class BelieveGameTest {
         game.start();
 
         assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Верно! Это правда.")));//проверка содержания определенной строки в выводе
+                .anyMatch(s -> s.contains("Верно! Это правда.")));
     }
 
     @Test
-    public void testIncorrectAnswerFalse() { //если факт ложный и ты пишешь "верю" -> "неверно"
+    public void testIncorrectAnswerFalse() {
         repository.addStatement(new Statement("Земля плоская", false, "Она круглая"));
         view.addInput("верю");
         view.addInput("\\exit");
@@ -42,7 +44,7 @@ public class BelieveGameTest {
     }
 
     @Test
-    public void testCorrectAnswerNotBelieve() { //если факт ложный и ты пишешь "не верю" -> "верно.это ложь"
+    public void testCorrectAnswerNotBelieve() {
         repository.addStatement(new Statement("Земля плоская", false, "Она круглая"));
         view.addInput("не верю");
         view.addInput("\\exit");
@@ -83,7 +85,7 @@ public class BelieveGameTest {
     }
 
     @Test
-    public void testExitCommand() { //тест что команда "exit" завершает работу
+    public void testExitCommand() {
         repository.addStatement(new Statement("Тест", true, "Пояснение"));
         view.addInput("\\exit");
 
@@ -95,7 +97,6 @@ public class BelieveGameTest {
 
     @Test
     public void testInfiniteLoopWithRepeatingFacts() {
-        // Один факт — должен повторяться бесконечно
         repository.addStatement(new Statement("Небо синее", true, "Релеевское рассеяние"));
         view.addInput("верю");
         view.addInput("верю");
