@@ -1,4 +1,5 @@
-import data.InMemoryStatementRepository;
+import data.FilteredStatementRepository;
+import data.StatementData;
 import data.StatementRepository;
 import logic.BelieveGame;
 import view.ConsoleView;
@@ -6,9 +7,15 @@ import view.ConsoleViewImpl;
 
 public class Main {
     public static void main(String[] args) {
-        StatementRepository repository = new InMemoryStatementRepository();
         ConsoleView view = new ConsoleViewImpl();
-        BelieveGame game = new BelieveGame(repository, view);
+
+        StatementRepository initialRepository = new FilteredStatementRepository(
+                StatementData.getAllStatements(),
+                null
+        );
+
+        BelieveGame game = new BelieveGame(initialRepository, view);
+
         game.start();
     }
 }
