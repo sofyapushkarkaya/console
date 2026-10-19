@@ -10,17 +10,8 @@ public class FakeStatementRepository implements StatementRepository {
     public FakeStatementRepository() {
     }
 
-    // Конструктор для быстрого создания
-    public FakeStatementRepository(List<Statement> statements) {
-        this.statements.addAll(statements);
-    }
-
     public void addStatement(Statement statement) {
         statements.add(statement);
-    }
-
-    public void reset() {
-        index = 0;
     }
 
     @Override

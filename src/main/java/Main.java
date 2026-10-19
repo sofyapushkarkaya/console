@@ -1,5 +1,3 @@
-package main.java;
-
 import data.FilteredStatementRepository;
 import data.StatementData;
 import data.StatementRepository;
