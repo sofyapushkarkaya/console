@@ -1,19 +1,26 @@
-import data.StatementRepository;
 import model.Statement;
-
 import java.util.ArrayList;
 import java.util.List;
-
-//нужен чтобы если тесту нужен определнный факт (правдивый/ложный), то не подгадывать
-//под список, он может менятся, перемешиваться, высылать факты рандомно, а для тестов
-//нужен заранее известный факт
+import data.StatementRepository;
 
 public class FakeStatementRepository implements StatementRepository {
     private final List<Statement> statements = new ArrayList<>();
     private int index = 0;
 
+    public FakeStatementRepository() {
+    }
+
+    // Конструктор для быстрого создания
+    public FakeStatementRepository(List<Statement> statements) {
+        this.statements.addAll(statements);
+    }
+
     public void addStatement(Statement statement) {
         statements.add(statement);
+    }
+
+    public void reset() {
+        index = 0;
     }
 
     @Override
@@ -22,7 +29,7 @@ public class FakeStatementRepository implements StatementRepository {
             return null;
         }
         Statement s = statements.get(index);
-        index = (index + 1) % statements.size(); // Зацикливание
+        index = (index + 1) % statements.size();
         return s;
     }
 

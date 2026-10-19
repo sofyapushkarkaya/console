@@ -10,6 +10,7 @@ public class userSession {
     private Statement currentStatement;
     private int correctAnswers = 0;
     private int totalAnswers = 0;
+    private int wrongStreak = 0;
     private boolean awaitingCategoryChoice = false;
 
     public userSession(String userId) {
@@ -52,17 +53,17 @@ public class userSession {
         this.totalAnswers++;
     }
 
-    public boolean isAwaitingCategoryChoice() {
-        return awaitingCategoryChoice;
-    }
+    public int getWrongStreak() { return wrongStreak; }
+    public void setWrongStreak(int wrongStreak) { this.wrongStreak = wrongStreak; }
 
-    public void setAwaitingCategoryChoice(boolean awaitingCategoryChoice) {
-        this.awaitingCategoryChoice = awaitingCategoryChoice;
-    }
+    public boolean isAwaitingCategoryChoice() { return awaitingCategoryChoice; }
+    public void setAwaitingCategoryChoice(boolean awaitingCategoryChoice) { this.awaitingCategoryChoice = awaitingCategoryChoice; }
+
 
     public void resetStats() {
         this.correctAnswers = 0;
         this.totalAnswers = 0;
+        this.wrongStreak = 0;
     }
 
     public boolean isGameStarted() {

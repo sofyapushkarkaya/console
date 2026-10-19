@@ -1,113 +1,72 @@
-
-
+import data.StatementRepository;
 import logic.BelieveGame;
 import model.Statement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import view.BotPlatform;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class FakeBotPlatform implements BotPlatform {
+    public List<String> messages = new ArrayList<>();
+    @Override
+    public void sendMessage(String userId, String text) {
+        messages.add(userId + ": " + text);
+    }
+    @Override
+    public void sendHelp(String userId) {
+        messages.add(userId + ": HELP");
+    }
+}
 
 public class BelieveGameTest {
-    private FakeStatementRepository repository;
-    private FakeConsoleView view;
     private BelieveGame game;
+    private FakeBotPlatform fakePlatform;
 
     @BeforeEach
     public void setUp() {
-        repository = new FakeStatementRepository();
-        view = new FakeConsoleView();
-        game = new BelieveGame(repository, view);
+        fakePlatform = new FakeBotPlatform();
+
+        // Создаем репозиторий с тремя ЛОЖНЫМИ фактами
+        FakeStatementRepository fakeRepo = new FakeStatementRepository();
+        fakeRepo.addStatement(new Statement("Ложь 1", false, "Это ложь", "Животные"));
+        fakeRepo.addStatement(new Statement("Ложь 2", false, "Это ложь", "Животные"));
+        fakeRepo.addStatement(new Statement("Ложь 3", false, "Это ложь", "Животные"));
+
+        game = new BelieveGame(fakeRepo, fakePlatform);
     }
 
     @Test
-    public void testCorrectAnswerTrue() {
-        repository.addStatement(new Statement("Небо синее", true, "Релеевское рассеяние"));
-        view.addInput("верю");
-        view.addInput("\\exit");
+    public void testTwoUsersPlayIndependently() {
+        // 1. Пользователи заходят и выбирают категории
+        game.onMessageReceived("Вася", "привет");
+        game.onMessageReceived("Вася", "1"); // Выбирает Животные
+        game.onMessageReceived("Петя", "привет");
+        game.onMessageReceived("Петя", "3"); // Выбирает Технику
 
-        game.start();
+        // Проверяем, что категории выбраны верно
+        assertTrue(fakePlatform.messages.stream().anyMatch(m -> m.startsWith("Вася: Отлично! Категория: Животные")));
+        assertTrue(fakePlatform.messages.stream().anyMatch(m -> m.startsWith("Петя: Отлично! Категория: Техника")));
 
-        assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Верно! Это правда.")));
-    }
+        // Очищаем историю, чтобы проверять только ответы
+        fakePlatform.messages.clear();
 
-    @Test
-    public void testIncorrectAnswerFalse() {
-        repository.addStatement(new Statement("Земля плоская", false, "Она круглая"));
-        view.addInput("верю");
-        view.addInput("\\exit");
+        // 2. Вася ошибается 3 раза подряд (отвечает "верю" на ложные факты)
+        game.onMessageReceived("Вася", "верю"); // Ошибка 1
+        game.onMessageReceived("Вася", "верю"); // Ошибка 2
+        game.onMessageReceived("Вася", "верю"); // Ошибка 3
 
-        game.start();
+        // Проверяем, что Вася проиграл
+        assertTrue(fakePlatform.messages.stream().anyMatch(m -> m.contains("3 ошибки подряд")), "Вася должен был проиграть");
 
-        assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Неверно! Это ложь.")));
-    }
+        // 3. Проверяем, что Петя всё еще может играть
+        fakePlatform.messages.clear();
+        game.onMessageReceived("Петя", "верю");
 
-    @Test
-    public void testCorrectAnswerNotBelieve() {
-        repository.addStatement(new Statement("Земля плоская", false, "Она круглая"));
-        view.addInput("не верю");
-        view.addInput("\\exit");
-
-        game.start();
-
-        assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Верно! Это ложь.")));
-    }
-
-    @Test
-    public void testHelpCommandDoesNotSkipQuestion() {
-        repository.addStatement(new Statement("Тест", true, "Пояснение"));
-        view.addInput("\\help");
-        view.addInput("верю");
-        view.addInput("\\exit");
-
-        game.start();
-
-        assertTrue(view.getOutputs().contains("HELP_PRINTED"));
-        assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Верно! Это правда.")));
-    }
-
-    @Test
-    public void testUnknownCommandDoesNotSkipQuestion() {
-        repository.addStatement(new Statement("Тест", true, "Пояснение"));
-        view.addInput("абракадабра");
-        view.addInput("верю");
-        view.addInput("\\exit");
-
-        game.start();
-
-        assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Я не понял.")));
-        assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Верно! Это правда.")));
-    }
-
-    @Test
-    public void testExitCommand() {
-        repository.addStatement(new Statement("Тест", true, "Пояснение"));
-        view.addInput("\\exit");
-
-        game.start();
-
-        assertTrue(view.getOutputs().stream()
-                .anyMatch(s -> s.contains("Спасибо за игру! Пока!")));
-    }
-
-    @Test
-    public void testInfiniteLoopWithRepeatingFacts() {
-        repository.addStatement(new Statement("Небо синее", true, "Релеевское рассеяние"));
-        view.addInput("верю");
-        view.addInput("верю");
-        view.addInput("верю");
-        view.addInput("\\exit");
-
-        game.start();
-
-        long correctAnswers = view.getOutputs().stream()
-                .filter(s -> s.contains("Верно! Это правда."))
-                .count();
-        assertTrue(correctAnswers >= 3);
+        // Петя не должен получить сообщение об окончании игры
+        assertFalse(fakePlatform.messages.stream().anyMatch(m -> m.contains("Игра окончена")), "Петя не должен был проиграть");
     }
 }

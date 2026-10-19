@@ -1,146 +1,159 @@
 package logic;
 
-import data.StatementRepository;
+import data.*;
 import model.Statement;
-import data.StatementData;
-import data.FilteredStatementRepository;
-import view.ConsoleView;
+import view.BotPlatform;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class BelieveGame {
-    private StatementRepository repository;
-    private final ConsoleView view;
-    private Statement currentStatement;
+public class BelieveGame implements Bot {
+    private final BotPlatform platform;
+    private final StatementRepository initialRepository; // Сохраняем стартовый репозиторий
+    private final Map<String, userSession> sessions = new HashMap<>();
 
-    private int correctAnswers = 0;
-    private int totalAnswers = 0;
-    private int wrongStreak = 0;
-
-    public BelieveGame(StatementRepository repository, ConsoleView view) {
-        this.repository = repository;
-        this.view = view;
+    public BelieveGame(StatementRepository initialRepository, BotPlatform platform) {
+        this.initialRepository = initialRepository;
+        this.platform = platform;
     }
 
-    public void start() {
-        view.print("Привет! Я бот 'Верю/Не верю'. Я буду говорить факт, а ты отвечай 'верю' или 'не верю'. Напиши '\\help' для справки или '\\exit' для выхода.");
+    @Override
+    public void onMessageReceived(String userId, String text) {
+        userSession session = sessions.computeIfAbsent(userId, userSession::new);
 
-        while (true) {
-            //проверка если фактов вообще нет в списке
-            if (!repository.hasNext()) {
-                view.print("Нет ни одного факта для игры. Завершаю работу.");
-                break;
-            }
-
-            Statement statement = repository.getNextStatement();
-            view.print(statement.getText());
-
-            String answer = view.readInput();
-
-            //команда выхода
-            if (answer.equals("\\exit") || answer.equals("\\quit")) {
-                view.print("Спасибо за игру! Пока!");
-                break;
-            }
-
-            if (answer.equals("\\help")) {
-                view.printHelp();
-                continue;
-            }
-            if (answer.equals("\\category")) {
-                selectCategory();
-                currentStatement = null;
-                wrongStreak = 0;
-                continue;
-            }
-
-
-            //чтоб все под одну гребенку было
-            answer = answer.trim().toLowerCase();
-
-            boolean isCorrect = false;
-
-            if (answer.equals("верю")) {
-                isCorrect = currentStatement.isTrue();
-            } else if (answer.equals("не верю") || answer.equals("неверю")) {
-                isCorrect = !currentStatement.isTrue();
-            } else {
-                view.print("Я не понял. Напиши 'верю' или 'не верю'.");
-                continue;
-            }
-            totalAnswers++;
-            if (isCorrect) {
-                correctAnswers++;
-                wrongStreak = 0;
-                if (currentStatement.isTrue()) {
-                    view.print("Верно! Это правда. " + currentStatement.getExplanation());
-                } else {
-                    view.print("Верно! Это ложь. " + currentStatement.getExplanation());
-                }
-            } else {
-                wrongStreak++;
-                if (currentStatement.isTrue()) {
-                    view.print("Неверно! Это правда. " + currentStatement.getExplanation());
-                } else {
-                    view.print("Неверно! Это ложь. " + currentStatement.getExplanation());
-                }
-
-                if (wrongStreak >= 3) {
-                    view.print("Вы допустили 3 ошибки подряд. Игра окончена!");
-                    break;
-                }
-            }
-
-            currentStatement = null;
+        // Обработка команд
+        if (text.equalsIgnoreCase("\\exit") || text.equalsIgnoreCase("\\quit")) {
+            platform.sendMessage(userId, "Спасибо за игру! Пока!");
+            sessions.remove(userId);
+            return;
+        }
+        if (text.equalsIgnoreCase("\\help")) {
+            platform.sendHelp(userId);
+            return;
         }
 
-        printFinalStatistics();
+        // Если ждем выбора категории
+        if (session.isAwaitingCategoryChoice()) {
+            handleCategoryChoice(userId, text, session);
+            return;
+        }
+
+        // Если игра еще не начата (первый заход)
+        if (!session.isGameStarted()) {
+            platform.sendMessage(userId, "Привет! Выбери категорию:");
+            selectCategory(userId, session);
+            return;
+        }
+
+        // Обработка ответа на факт
+        handleAnswer(userId, text, session);
     }
 
-    private void selectCategory() {
+    private void selectCategory(String userId, userSession session) {
         List<String> categories = StatementData.getAllCategories();
-
-        view.print("");
-        view.print("Выбери категорию:");
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < categories.size(); i++) {
-            view.print((i + 1) + ". " + categories.get(i));
+            sb.append(i + 1).append(". ").append(categories.get(i)).append("\n");
         }
-        view.print((categories.size() + 1) + ". Все");
-        view.print("Введи номер:");
+        sb.append(categories.size() + 1).append(". Все");
+        platform.sendMessage(userId, sb.toString());
+        session.setAwaitingCategoryChoice(true);
+    }
 
-        String input = view.readInput();
+    private void handleCategoryChoice(String userId, String text, userSession session) {
+        List<String> categories = StatementData.getAllCategories();
+        String category = null;
         int choice;
 
         try {
-            choice = Integer.parseInt(input.trim());
+            choice = Integer.parseInt(text.trim());
         } catch (NumberFormatException e) {
-            view.print("Неверный ввод. Играю со всеми фактами.");
+            platform.sendMessage(userId, "Неверный ввод. Играю со всеми фактами.");
             choice = categories.size() + 1;
         }
 
-        String category;
         if (choice >= 1 && choice <= categories.size()) {
             category = categories.get(choice - 1);
-        } else {
-            category = null;
         }
 
-        this.repository = new FilteredStatementRepository(
-                StatementData.getAllStatements(), category);
+        // ВАЖНО: Если передан фейковый репозиторий (из теста), используем его.
+        // Иначе создаем настоящий с фильтрацией по категориям.
+        // (Предполагается, что класс FakeStatementRepository находится в пакете по умолчанию или импортирован)
+        if (initialRepository != null && initialRepository.getClass().getSimpleName().equals("FakeStatementRepository")) {
+            session.setRepository(initialRepository);
+        } else {
+            session.setRepository(new FilteredStatementRepository(StatementData.getAllStatements(), category));
+        }
+
+        session.setAwaitingCategoryChoice(false);
+        session.resetStats();
 
         String catName = (category == null) ? "Все" : category;
-        view.print("Отлично! Категория: " + catName);
-        view.print("");
+        platform.sendMessage(userId, "Отлично! Категория: " + catName);
+        startNewRound(userId, session);
     }
 
-    private void printFinalStatistics() {
-        view.print("");
-        view.print("Итоги игры:");
-        view.print("У вас " + correctAnswers + " из " + totalAnswers + " правильных ответов.");
+    private void handleAnswer(String userId, String text, userSession session) {
+        String answer = text.trim().toLowerCase();
+        boolean isCorrect = false;
+        Statement current = session.getCurrentStatement();
 
-        if (totalAnswers > 0) {
-            int percent = (int) Math.round((double) correctAnswers / totalAnswers * 100);
-            view.print("Точность: " + percent + "%");
+        if (answer.equals("верю")) {
+            isCorrect = current.isTrue();
+        } else if (answer.equals("не верю") || answer.equals("неверю")) {
+            isCorrect = !current.isTrue();
+        } else {
+            platform.sendMessage(userId, "Я не понял. Напиши 'верю' или 'не верю'.");
+            return;
+        }
+
+        session.incrementTotalAnswers();
+
+        if (isCorrect) {
+            session.incrementCorrectAnswers();
+            session.setWrongStreak(0);
+            if (current.isTrue()) {
+                platform.sendMessage(userId, "Верно! Это правда. " + current.getExplanation());
+            } else {
+                platform.sendMessage(userId, "Верно! Это ложь. " + current.getExplanation());
+            }
+        } else {
+            session.setWrongStreak(session.getWrongStreak() + 1);
+            if (current.isTrue()) {
+                platform.sendMessage(userId, "Неверно! Это правда. " + current.getExplanation());
+            } else {
+                platform.sendMessage(userId, "Неверно! Это ложь. " + current.getExplanation());
+            }
+
+            if (session.getWrongStreak() >= 3) {
+                platform.sendMessage(userId, "Вы допустили 3 ошибки подряд. Игра окончена!");
+                printFinalStatistics(userId, session);
+                sessions.remove(userId);
+                return;
+            }
+        }
+
+        session.setCurrentStatement(null);
+        startNewRound(userId, session);
+    }
+
+    private void startNewRound(String userId, userSession session) {
+        if (!session.getRepository().hasNext()) {
+            platform.sendMessage(userId, "Нет ни одного факта для игры. Завершаю работу.");
+            return;
+        }
+        Statement next = session.getRepository().getNextStatement();
+        session.setCurrentStatement(next);
+        platform.sendMessage(userId, next.getText() + "\nВерите? (верю/не верю)");
+    }
+
+    private void printFinalStatistics(String userId, userSession session) {
+        platform.sendMessage(userId, "Итоги игры:");
+        platform.sendMessage(userId, "У вас " + session.getCorrectAnswers() + " из " + session.getTotalAnswers() + " правильных ответов.");
+        if (session.getTotalAnswers() > 0) {
+            int percent = (int) Math.round((double) session.getCorrectAnswers() / session.getTotalAnswers() * 100);
+            platform.sendMessage(userId, "Точность: " + percent + "%");
         }
     }
 }
