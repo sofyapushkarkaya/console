@@ -10,4 +10,6 @@ public class LocalChatPlatform implements BotPlatform {
     public void sendHelp(String userId) {
         System.out.println("[Бот -> " + userId + "]: Я - бот 'Верю/Не верю'. Отвечай 'верю' или 'не верю'. Команды: \\help, \\exit.");
     }
+    //Здесь приписка "[Бот -> " + userId + "]Э нужна, что бы на выводе\тестах
+    //было понятно кому адресовано соо
 }

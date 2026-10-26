@@ -33,13 +33,15 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        // Если ждем выбора категории
+        //Что бы бот понял, что он ждет категорию
+        //инчае выбор категории он может принять за ответ верю\неверю и начать его проверять
+        //геттер
         if (session.isAwaitingCategoryChoice()) {
             handleCategoryChoice(userId, text, session);
             return;
         }
 
-        // Если игра еще не начата (первый заход)
+        // Если игра еще не начата
         if (!session.isGameStarted()) {
             platform.sendMessage(userId, "Привет! Выбери категорию:");
             selectCategory(userId, session);
@@ -50,6 +52,7 @@ public class BelieveGame implements Bot {
         handleAnswer(userId, text, session);
     }
 
+    //Бот печатает категории из которых пользователь выбирает нужную ему
     private void selectCategory(String userId, userSession session) {
         List<String> categories = StatementData.getAllCategories();
         StringBuilder sb = new StringBuilder();
@@ -58,7 +61,7 @@ public class BelieveGame implements Bot {
         }
         sb.append(categories.size() + 1).append(". Все");
         platform.sendMessage(userId, sb.toString());
-        session.setAwaitingCategoryChoice(true);
+        session.setAwaitingCategoryChoice(true);//флаг ожидания. сеттер
     }
 
     private void handleCategoryChoice(String userId, String text, userSession session) {
@@ -77,9 +80,8 @@ public class BelieveGame implements Bot {
             category = categories.get(choice - 1);
         }
 
-        // ВАЖНО: Если передан фейковый репозиторий (из теста), используем его.
-        // Иначе создаем настоящий с фильтрацией по категориям.
-        // (Предполагается, что класс FakeStatementRepository находится в пакете по умолчанию или импортирован)
+        //Если передан фейковый репозиторий (из теста), используем его
+        //Иначе создаем настоящий с фильтрацией по категориям
         if (initialRepository != null && initialRepository.getClass().getSimpleName().equals("FakeStatementRepository")) {
             session.setRepository(initialRepository);
         } else {
@@ -108,7 +110,7 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        session.incrementTotalAnswers();
+        session.incrementTotalAnswers();//Общий счетчик ответов +1
 
         if (isCorrect) {
             session.incrementCorrectAnswers();
