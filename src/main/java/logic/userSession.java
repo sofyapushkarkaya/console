@@ -69,8 +69,9 @@ public class userSession {
         return wrongStreak;
     }
 
-    public boolean isAwaitingCategoryChoice() { return awaitingCategoryChoice; }
-    public void setAwaitingCategoryChoice(boolean awaitingCategoryChoice) { this.awaitingCategoryChoice = awaitingCategoryChoice; }
+    public void setWrongStreak(int wrongStreak) {
+        this.wrongStreak = wrongStreak;
+    }
 
 
     public void resetStats() {
