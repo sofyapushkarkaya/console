@@ -65,8 +65,9 @@ public class userSession {
         this.totalAnswers++;
     }
 
-    public int getWrongStreak() { return wrongStreak; }
-    public void setWrongStreak(int wrongStreak) { this.wrongStreak = wrongStreak; }
+    public int getWrongStreak() {
+        return wrongStreak;
+    }
 
     public boolean isAwaitingCategoryChoice() { return awaitingCategoryChoice; }
     public void setAwaitingCategoryChoice(boolean awaitingCategoryChoice) { this.awaitingCategoryChoice = awaitingCategoryChoice; }
