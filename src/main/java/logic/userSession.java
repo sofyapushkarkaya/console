@@ -22,8 +22,21 @@ public class userSession {
         return repository;
     }
 
-    public void setRepository(StatementRepository repository) {
-        this.repository = repository;
+    public Statement getNextStatement() {
+        if (currentCategoryStatements == null || currentCategoryStatements.isEmpty()) {
+            return null;
+        }
+        Statement s = currentCategoryStatements.get(currentIndex);
+        currentIndex = (currentIndex + 1) % currentCategoryStatements.size();
+        return s;
+    }
+
+    public boolean hasStatements() {
+        return currentCategoryStatements != null && !currentCategoryStatements.isEmpty();
+    }
+
+    public boolean isGameStarted() {
+        return currentCategoryStatements != null;
     }
 
     public Statement getCurrentStatement() {
