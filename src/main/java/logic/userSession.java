@@ -6,7 +6,8 @@ import model.Statement;
 public class userSession {
 
     private final String userId;
-    private StatementRepository repository;
+    private List<Statement> currentCategoryStatements;
+    private int currentIndex = 0;
     private Statement currentStatement;
     private int correctAnswers = 0;
     private int totalAnswers = 0;
