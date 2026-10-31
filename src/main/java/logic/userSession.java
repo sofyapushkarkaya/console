@@ -18,8 +18,10 @@ public class userSession {
         this.userId = userId;
     }
 
-    public StatementRepository getRepository() {
-        return repository;
+    public void setCategory(String categoryName) {
+        this.currentCategoryStatements = StatementData.getStatementsByCategory().get(categoryName);
+        this.currentIndex = 0;
+        this.currentStatement = null;
     }
 
     public Statement getNextStatement() {
