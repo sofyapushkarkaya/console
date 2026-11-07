@@ -17,8 +17,8 @@ public class FilteredStatementRepository implements StatementRepository {
 
     @Override
     public Statement getNextStatement() {
-        Statement statement = filteredStatements.get(currentIndex);
-        currentIndex = (currentIndex + 1) % filteredStatements.size();
+        Statement statement = statements.get(currentIndex);
+        currentIndex = (currentIndex + 1) % statements.size();
         return statement;
     }
 
