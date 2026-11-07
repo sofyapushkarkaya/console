@@ -1,13 +1,15 @@
 package logic;
 
+import data.FilteredStatementRepository;
 import data.StatementRepository;
 import model.Statement;
+
+import java.util.List;
 
 public class userSession {
 
     private final String userId;
-    private List<Statement> currentCategoryStatements;
-    private int currentIndex = 0;
+    private StatementRepository repository;      // ← вместо List + currentIndex
     private Statement currentStatement;
     private int correctAnswers = 0;
     private int totalAnswers = 0;
@@ -18,27 +20,22 @@ public class userSession {
         this.userId = userId;
     }
 
-    public void setCategory(String categoryName) {
-        this.currentCategoryStatements = StatementData.getStatementsByCategory().get(categoryName);
-        this.currentIndex = 0;
+    /** Запускает игру по готовому списку фактов (уже отфильтрованному). */
+    public void startGame(List<Statement> facts) {
+        this.repository = new FilteredStatementRepository(facts);
         this.currentStatement = null;
     }
 
-    public Statement getNextStatement() {
-        if (currentCategoryStatements == null || currentCategoryStatements.isEmpty()) {
-            return null;
-        }
-        Statement s = currentCategoryStatements.get(currentIndex);
-        currentIndex = (currentIndex + 1) % currentCategoryStatements.size();
-        return s;
+    public boolean isGameStarted() {
+        return repository != null;
     }
 
     public boolean hasStatements() {
-        return currentCategoryStatements != null && !currentCategoryStatements.isEmpty();
+        return repository != null && repository.hasNext();
     }
 
-    public boolean isGameStarted() {
-        return currentCategoryStatements != null;
+    public Statement getNextStatement() {
+        return repository == null ? null : repository.getNextStatement();
     }
 
     public Statement getCurrentStatement() {
@@ -49,38 +46,23 @@ public class userSession {
         this.currentStatement = currentStatement;
     }
 
-    public int getCorrectAnswers() {
-        return correctAnswers;
-    }
+    public int getCorrectAnswers() { return correctAnswers; }
+    public int getTotalAnswers() { return totalAnswers; }
 
-    public int getTotalAnswers() {
-        return totalAnswers;
-    }
+    public void incrementCorrectAnswers() { this.correctAnswers++; }
+    public void incrementTotalAnswers() { this.totalAnswers++; }
 
-    public void incrementCorrectAnswers() {
-        this.correctAnswers++;
-    }
+    public int getWrongStreak() { return wrongStreak; }
+    public void setWrongStreak(int wrongStreak) { this.wrongStreak = wrongStreak; }
 
-    public void incrementTotalAnswers() {
-        this.totalAnswers++;
+    public boolean isAwaitingCategoryChoice() { return awaitingCategoryChoice; }
+    public void setAwaitingCategoryChoice(boolean awaitingCategoryChoice) {
+        this.awaitingCategoryChoice = awaitingCategoryChoice;
     }
-
-    public int getWrongStreak() {
-        return wrongStreak;
-    }
-
-    public void setWrongStreak(int wrongStreak) {
-        this.wrongStreak = wrongStreak;
-    }
-
 
     public void resetStats() {
         this.correctAnswers = 0;
         this.totalAnswers = 0;
         this.wrongStreak = 0;
-    }
-
-    public boolean isGameStarted() {
-        return repository != null;
     }
 }
