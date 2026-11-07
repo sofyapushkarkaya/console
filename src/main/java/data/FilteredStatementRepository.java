@@ -8,13 +8,9 @@ public class FilteredStatementRepository implements StatementRepository {
     private final List<Statement> statements;
     private int currentIndex = 0;
 
-    public FilteredStatementRepository(List<Statement> allStatements, String category) {
-        this.filteredStatements = new ArrayList<>();
-
-        for (Statement s : allStatements) {
-            if (category == null || s.getCategory().equals(category)) {
-                filteredStatements.add(s);
-            }
+    public FilteredStatementRepository(List<Statement> statements) {
+        if (statements == null || statements.isEmpty()) {
+            throw new IllegalArgumentException("Список фактов пуст");
         }
 
         if (filteredStatements.isEmpty()) {
