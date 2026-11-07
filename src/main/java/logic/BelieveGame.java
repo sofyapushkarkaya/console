@@ -1,6 +1,6 @@
 package logic;
 
-import data.*;
+import data.StatementData;
 import model.Statement;
 import view.BotPlatform;
 
@@ -10,11 +10,9 @@ import java.util.Map;
 
 public class BelieveGame implements Bot {
     private final BotPlatform platform;
-    private final StatementRepository initialRepository; // Сохраняем стартовый репозиторий
     private final Map<String, userSession> sessions = new HashMap<>();
 
-    public BelieveGame(StatementRepository initialRepository, BotPlatform platform) {
-        this.initialRepository = initialRepository;
+    public BelieveGame(BotPlatform platform) {
         this.platform = platform;
     }
 
@@ -22,37 +20,40 @@ public class BelieveGame implements Bot {
     public void onMessageReceived(String userId, String text) {
         userSession session = sessions.computeIfAbsent(userId, userSession::new);
 
-        // Обработка команд
-        if (text.equalsIgnoreCase("\\exit") || text.equalsIgnoreCase("\\quit")) {
+        if (isExitCommand(text)) {
             platform.sendMessage(userId, "Спасибо за игру! Пока!");
             sessions.remove(userId);
             return;
         }
-        if (text.equalsIgnoreCase("\\help")) {
+
+        if (isHelpCommand(text)) {
             platform.sendHelp(userId);
             return;
         }
 
-        //Что бы бот понял, что он ждет категорию
-        //инчае выбор категории он может принять за ответ верю\неверю и начать его проверять
-        //геттер
         if (session.isAwaitingCategoryChoice()) {
             handleCategoryChoice(userId, text, session);
             return;
         }
 
-        // Если игра еще не начата
         if (!session.isGameStarted()) {
             platform.sendMessage(userId, "Привет! Выбери категорию:");
             selectCategory(userId, session);
             return;
         }
 
-        // Обработка ответа на факт
         handleAnswer(userId, text, session);
     }
 
-    //Бот печатает категории из которых пользователь выбирает нужную ему
+    private boolean isExitCommand(String text) {
+        return text.equalsIgnoreCase("/exit") || text.equalsIgnoreCase("\\exit")
+                || text.equalsIgnoreCase("/quit") || text.equalsIgnoreCase("\\quit");
+    }
+
+    private boolean isHelpCommand(String text) {
+        return text.equalsIgnoreCase("/help") || text.equalsIgnoreCase("\\help");
+    }
+
     private void selectCategory(String userId, userSession session) {
         List<String> categories = StatementData.getAllCategories();
         StringBuilder sb = new StringBuilder();
@@ -61,12 +62,12 @@ public class BelieveGame implements Bot {
         }
         sb.append(categories.size() + 1).append(". Все");
         platform.sendMessage(userId, sb.toString());
-        session.setAwaitingCategoryChoice(true);//флаг ожидания. сеттер
+        session.setAwaitingCategoryChoice(true);
     }
 
     private void handleCategoryChoice(String userId, String text, userSession session) {
         List<String> categories = StatementData.getAllCategories();
-        String category = null;
+        String categoryName = "Все";
         int choice;
 
         try {
@@ -77,28 +78,28 @@ public class BelieveGame implements Bot {
         }
 
         if (choice >= 1 && choice <= categories.size()) {
-            category = categories.get(choice - 1);
+            categoryName = categories.get(choice - 1);
         }
 
-        //Если передан фейковый репозиторий (из теста), используем его
-        //Иначе создаем настоящий с фильтрацией по категориям
-        if (initialRepository != null && initialRepository.getClass().getSimpleName().equals("FakeStatementRepository")) {
-            session.setRepository(initialRepository);
-        } else {
-            session.setRepository(new FilteredStatementRepository(StatementData.getAllStatements(), category));
+        // категорию в готовый список превращаем ЗДЕСЬ
+        List<Statement> facts = StatementData.getStatementsByCategory().get(categoryName);
+        if (facts == null || facts.isEmpty()) {
+            platform.sendMessage(userId,
+                    "В категории \"" + categoryName + "\" нет фактов. Выбери другую.");
+            return;   // остаёмся в ожидании выбора
         }
 
+        session.startGame(facts);                  // ← вместо setCategory
         session.setAwaitingCategoryChoice(false);
         session.resetStats();
 
-        String catName = (category == null) ? "Все" : category;
-        platform.sendMessage(userId, "Отлично! Категория: " + catName);
+        platform.sendMessage(userId, "Отлично! Категория: " + categoryName);
         startNewRound(userId, session);
     }
 
     private void handleAnswer(String userId, String text, userSession session) {
         String answer = text.trim().toLowerCase();
-        boolean isCorrect = false;
+        boolean isCorrect;
         Statement current = session.getCurrentStatement();
 
         if (answer.equals("верю")) {
@@ -110,7 +111,7 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        session.incrementTotalAnswers();//Общий счетчик ответов +1
+        session.incrementTotalAnswers();
 
         if (isCorrect) {
             session.incrementCorrectAnswers();
@@ -141,20 +142,22 @@ public class BelieveGame implements Bot {
     }
 
     private void startNewRound(String userId, userSession session) {
-        if (!session.getRepository().hasNext()) {
+        if (!session.hasStatements()) {
             platform.sendMessage(userId, "Нет ни одного факта для игры. Завершаю работу.");
             return;
         }
-        Statement next = session.getRepository().getNextStatement();
+        Statement next = session.getNextStatement();
         session.setCurrentStatement(next);
         platform.sendMessage(userId, next.getText() + "\nВерите? (верю/не верю)");
     }
 
     private void printFinalStatistics(String userId, userSession session) {
         platform.sendMessage(userId, "Итоги игры:");
-        platform.sendMessage(userId, "У вас " + session.getCorrectAnswers() + " из " + session.getTotalAnswers() + " правильных ответов.");
+        platform.sendMessage(userId, "У вас " + session.getCorrectAnswers() + " из "
+                + session.getTotalAnswers() + " правильных ответов.");
         if (session.getTotalAnswers() > 0) {
-            int percent = (int) Math.round((double) session.getCorrectAnswers() / session.getTotalAnswers() * 100);
+            int percent = (int) Math.round((double) session.getCorrectAnswers()
+                    / session.getTotalAnswers() * 100);
             platform.sendMessage(userId, "Точность: " + percent + "%");
         }
     }
