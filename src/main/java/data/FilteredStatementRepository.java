@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FilteredStatementRepository implements StatementRepository {
-    private final List<Statement> filteredStatements;
+    private final List<Statement> statements;
     private int currentIndex = 0;
 
     public FilteredStatementRepository(List<Statement> allStatements, String category) {
