@@ -24,6 +24,6 @@ public class FilteredStatementRepository implements StatementRepository {
 
     @Override
     public boolean hasNext() {
-        return !filteredStatements.isEmpty();
+        return !statements.isEmpty();
     }
 }
