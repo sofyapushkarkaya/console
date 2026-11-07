@@ -12,10 +12,7 @@ public class FilteredStatementRepository implements StatementRepository {
         if (statements == null || statements.isEmpty()) {
             throw new IllegalArgumentException("Список фактов пуст");
         }
-
-        if (filteredStatements.isEmpty()) {
-            throw new IllegalArgumentException("Нет фактов в категории: " + category);
-        }
+        this.statements = new ArrayList<>(statements); // копия — защита от внешних изменений
     }
 
     @Override
