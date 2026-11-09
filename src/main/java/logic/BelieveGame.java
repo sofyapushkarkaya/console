@@ -27,7 +27,7 @@ public class BelieveGame implements Bot {
         }
 
         if (isHelpCommand(text)) {
-            platform.sendHelp(userId);
+            platform.sendMessage(userId, "Я - бот 'Верю/Не верю'. Отвечай 'верю' или 'не верю'. Команды: \\help, \\exit.");
             return;
         }
 

@@ -14,10 +14,6 @@ class FakeBotPlatform implements BotPlatform {
     public void sendMessage(String userId, String text) {
         messages.add(userId + ": " + text);
     }
-    @Override
-    public void sendHelp(String userId) {
-        messages.add(userId + ": HELP");
-    }
 }
 
 public class BelieveGameTest {
