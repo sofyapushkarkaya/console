@@ -2,8 +2,6 @@ package data;
 
 import model.Statement;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,20 +24,5 @@ public class StatementData {
 
     public static List<String> getAllCategories() {
         return List.of("Животные", "Наука", "Техника");
-    }
-    public static Map<String, List<Statement>> getStatementsByCategory() {
-        Map<String, List<Statement>> map = new HashMap<>();
-        List<Statement> all = getAllStatements();
-
-        for (Statement s : all) {
-            // Если категории еще нет в мапе - создаем пустой список
-            map.putIfAbsent(s.getCategory(), new ArrayList<>());
-            map.get(s.getCategory()).add(s);
-        }
-
-        // Добавляем категорию "Все", куда кладем вообще все факты
-        map.put("Все", all);
-
-        return map;
     }
 }
