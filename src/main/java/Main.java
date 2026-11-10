@@ -11,16 +11,15 @@ public class Main {
     public static void main(String[] args) {
         //Создаем платформу для консоли
         //Был view который ждал ввода пользователя
-        //Тк переделано для бота, который не висит в ожидании
+        //Тк переделано для бота, кdоторый не висит в ожидании
         //то платформ умеет только отправлять ответы
         BotPlatform platform = new LocalChatPlatform();
 
         StatementRepository initialRepository = new FilteredStatementRepository(
-                StatementData.getAllStatements(),
-                null
+                StatementData.getAllStatements()
         );
 
-        BelieveGame game = new BelieveGame(initialRepository, platform);
+        BelieveGame game = new BelieveGame(platform);
         Scanner scanner = new Scanner(System.in);
         String userId = "LocalUser"; //В консоли один пользователь
 
