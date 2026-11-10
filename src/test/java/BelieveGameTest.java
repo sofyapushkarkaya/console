@@ -23,7 +23,6 @@ public class BelieveGameTest {
     @BeforeEach
     public void setUp() {
         fakePlatform = new FakeBotPlatform();
-        // Теперь конструктор принимает ТОЛЬКО платформу
         game = new BelieveGame(fakePlatform);
     }
 
@@ -45,26 +44,17 @@ public class BelieveGameTest {
         // 2. Заставляем Васю ошибаться 3 раза подряд.
         // Для этого смотрим, какой факт ему выпал, и отвечаем НАОБОРОТ.
         for (int i = 0; i < 3; i++) {
-            // Достаем последнее сообщение (вопрос), которое игра отправила Васе
+            // Достаем последнее сообщение, которое игра отправила Васе
             String lastMessageToVasya = fakePlatform.messages.stream()
                     .filter(m -> m.startsWith("Вася: "))
                     .reduce((first, second) -> second) // берем последнее
                     .orElse("");
 
-            // Если факт правдивый (в сообщении нет слова "ложь", но мы точно знаем из StatementData,
-            // что первые два факта про животных - правда, а третий - ложь).
-            // Чтобы не гадать, просто заставим его ошибаться на основе текста.
-
-            // В StatementData:
-            // 1. Осьминог (правда)
-            // 2. Акула (правда)
-            // 3. День пауков (ложь)
-
             String wrongAnswer;
             if (lastMessageToVasya.contains("день пауков")) {
-                wrongAnswer = "верю"; // Если факт ложный, а мы верим - это ошибка
+                wrongAnswer = "верю";
             } else {
-                wrongAnswer = "не верю"; // Если факт правдивый, а мы не верим - это ошибка
+                wrongAnswer = "не верю";
             }
 
             game.onMessageReceived("Вася", wrongAnswer);
