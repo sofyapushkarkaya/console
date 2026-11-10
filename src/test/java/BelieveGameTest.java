@@ -1,4 +1,5 @@
 import logic.BelieveGame;
+import model.Statement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import view.BotPlatform;
@@ -14,6 +15,10 @@ class FakeBotPlatform implements BotPlatform {
     public void sendMessage(String userId, String text) {
         messages.add(userId + ": " + text);
     }
+    @Override
+    public void sendHelp(String userId) {
+        messages.add(userId + ": HELP");
+    }
 }
 
 public class BelieveGameTest {
@@ -23,8 +28,14 @@ public class BelieveGameTest {
     @BeforeEach
     public void setUp() {
         fakePlatform = new FakeBotPlatform();
-        // Теперь конструктор принимает ТОЛЬКО платформу
-        game = new BelieveGame(fakePlatform);
+
+        // Создаем репозиторий с тремя ЛОЖНЫМИ фактами
+        FakeStatementRepository fakeRepo = new FakeStatementRepository();
+        fakeRepo.addStatement(new Statement("Ложь 1", false, "Это ложь", "Животные"));
+        fakeRepo.addStatement(new Statement("Ложь 2", false, "Это ложь", "Животные"));
+        fakeRepo.addStatement(new Statement("Ложь 3", false, "Это ложь", "Животные"));
+
+        game = new BelieveGame(fakeRepo, fakePlatform);
     }
 
     @Test
@@ -42,33 +53,10 @@ public class BelieveGameTest {
         // Очищаем историю, чтобы проверять только ответы
         fakePlatform.messages.clear();
 
-        // 2. Заставляем Васю ошибаться 3 раза подряд.
-        // Для этого смотрим, какой факт ему выпал, и отвечаем НАОБОРОТ.
-        for (int i = 0; i < 3; i++) {
-            // Достаем последнее сообщение (вопрос), которое игра отправила Васе
-            String lastMessageToVasya = fakePlatform.messages.stream()
-                    .filter(m -> m.startsWith("Вася: "))
-                    .reduce((first, second) -> second) // берем последнее
-                    .orElse("");
-
-            // Если факт правдивый (в сообщении нет слова "ложь", но мы точно знаем из StatementData,
-            // что первые два факта про животных - правда, а третий - ложь).
-            // Чтобы не гадать, просто заставим его ошибаться на основе текста.
-
-            // В StatementData:
-            // 1. Осьминог (правда)
-            // 2. Акула (правда)
-            // 3. День пауков (ложь)
-
-            String wrongAnswer;
-            if (lastMessageToVasya.contains("день пауков")) {
-                wrongAnswer = "верю"; // Если факт ложный, а мы верим - это ошибка
-            } else {
-                wrongAnswer = "не верю"; // Если факт правдивый, а мы не верим - это ошибка
-            }
-
-            game.onMessageReceived("Вася", wrongAnswer);
-        }
+        // 2. Вася ошибается 3 раза подряд (отвечает "верю" на ложные факты)
+        game.onMessageReceived("Вася", "верю"); // Ошибка 1
+        game.onMessageReceived("Вася", "верю"); // Ошибка 2
+        game.onMessageReceived("Вася", "верю"); // Ошибка 3
 
         // Проверяем, что Вася проиграл
         assertTrue(fakePlatform.messages.stream().anyMatch(m -> m.contains("3 ошибки подряд")), "Вася должен был проиграть");
