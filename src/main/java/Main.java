@@ -15,10 +15,6 @@ public class Main {
         //то платформ умеет только отправлять ответы
         BotPlatform platform = new LocalChatPlatform();
 
-        StatementRepository initialRepository = new FilteredStatementRepository(
-                StatementData.getAllStatements()
-        );
-
         BelieveGame game = new BelieveGame(platform);
         Scanner scanner = new Scanner(System.in);
         String userId = "LocalUser"; //В консоли один пользователь
