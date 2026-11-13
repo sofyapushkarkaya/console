@@ -9,10 +9,15 @@ import java.util.List;
 import java.util.Map;
 
 public class BelieveGame implements Bot {
-    private final BotPlatform platform;
+    private BotPlatform platform; // Убрали final, чтобы можно было установить позже
     private final Map<String, userSession> sessions = new HashMap<>();
 
     public BelieveGame(BotPlatform platform) {
+        this.platform = platform;
+    }
+
+    // НОВЫЙ МЕТОД: Позволяет привязать платформу после создания игры
+    public void setPlatform(BotPlatform platform) {
         this.platform = platform;
     }
 

@@ -25,7 +25,7 @@ public class TelegramPlatform extends TelegramLongPollingBot implements BotPlatf
     @Override
     public String getBotToken() {
         // Вставьте сюда ваш токен от BotFather
-        return "ВАШ_ТОКЕН_ЗДЕСЬ";
+        return "9175278049:AAG4m32f87sDgSTi2m-P0fnd62ooGMqs3Bs";
     }
 
     // Этот метод вызывается, когда пользователь пишет боту
