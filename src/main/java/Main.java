@@ -1,6 +1,3 @@
-import data.FilteredStatementRepository;
-import data.StatementData;
-import data.StatementRepository;
 import logic.BelieveGame;
 import view.BotPlatform;
 import view.LocalChatPlatform;
