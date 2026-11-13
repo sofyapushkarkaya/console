@@ -1,15 +1,20 @@
 package logic;
 
-import data.FilteredStatementRepository;
-import data.StatementRepository;
+import data.StatementData;
 import model.Statement;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class userSession {
 
     private final String userId;
-    private StatementRepository repository;      // ← вместо List + currentIndex
+
+    private List<Integer> unaskedIds;
+    private List<Integer> askedIds;
+    private int currentStatementId = -1;
+
     private Statement currentStatement;
     private int correctAnswers = 0;
     private int totalAnswers = 0;
@@ -20,22 +25,46 @@ public class userSession {
         this.userId = userId;
     }
 
-    /** Запускает игру по готовому списку фактов (уже отфильтрованному). */
-    public void startGame(List<Statement> facts) {
-        this.repository = new FilteredStatementRepository(facts);
+    public void startGame(List<Integer> availableIds) {
+        this.unaskedIds = new ArrayList<>(availableIds);
+        this.askedIds = new ArrayList<>();
+        this.currentStatementId = -1;
         this.currentStatement = null;
     }
 
+    public void resetGame() {
+        this.unaskedIds = null;
+        this.askedIds = null;
+        this.currentStatementId = -1;
+        this.currentStatement = null;
+        this.awaitingCategoryChoice = true;
+    }
+
     public boolean isGameStarted() {
-        return repository != null;
+        return unaskedIds != null;
     }
 
     public boolean hasStatements() {
-        return repository != null && repository.hasNext();
+        return unaskedIds != null && (!unaskedIds.isEmpty() || !askedIds.isEmpty());
     }
 
     public Statement getNextStatement() {
-        return repository == null ? null : repository.getNextStatement();
+        if (unaskedIds == null) return null;
+
+        // Если вопросы закончились — начинаем новый круг
+        if (unaskedIds.isEmpty()) {
+            if (askedIds.isEmpty()) return null;
+            unaskedIds = new ArrayList<>(askedIds);
+            askedIds.clear();
+            Collections.shuffle(unaskedIds); // перемешиваем, чтобы порядок был другим
+        }
+
+        int nextId = unaskedIds.remove(0);
+        askedIds.add(nextId);
+        currentStatementId = nextId;
+
+        currentStatement = StatementData.getStatementById(nextId);
+        return currentStatement;
     }
 
     public Statement getCurrentStatement() {
