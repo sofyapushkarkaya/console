@@ -27,7 +27,15 @@ public class BelieveGame implements Bot {
         }
 
         if (isHelpCommand(text)) {
-            platform.sendMessage(userId, "Я - бот 'Верю/Не верю'. Отвечай 'верю' или 'не верю'. Команды: \\help, \\exit.");
+            platform.sendMessage(userId, "Я - бот 'Верю/Не верю'. Отвечай 'верю' или 'не верю'. Команды: \\help, \\exit, \\category (сменить категорию).");
+            return;
+        }
+
+        // Обработка команды смены категории
+        if (isCategoryCommand(text)) {
+            session.resetGame();
+            platform.sendMessage(userId, "Выбери новую категорию:");
+            selectCategory(userId, session);
             return;
         }
 
@@ -52,6 +60,10 @@ public class BelieveGame implements Bot {
 
     private boolean isHelpCommand(String text) {
         return text.equalsIgnoreCase("/help") || text.equalsIgnoreCase("\\help");
+    }
+
+    private boolean isCategoryCommand(String text) {
+        return text.equalsIgnoreCase("/category") || text.equalsIgnoreCase("\\category");
     }
 
     private void selectCategory(String userId, userSession session) {
@@ -81,15 +93,15 @@ public class BelieveGame implements Bot {
             categoryName = categories.get(choice - 1);
         }
 
-        // категорию в готовый список превращаем ЗДЕСЬ
-        List<Statement> facts = StatementData.getStatementsByCategory().get(categoryName);
-        if (facts == null || facts.isEmpty()) {
+        // Получаем ТОЛЬКО ID вопросов, сами объекты не копируем
+        List<Integer> ids = StatementData.getStatementIdsByCategory(categoryName);
+        if (ids.isEmpty()) {
             platform.sendMessage(userId,
                     "В категории \"" + categoryName + "\" нет фактов. Выбери другую.");
-            return;   // остаёмся в ожидании выбора
+            return;
         }
 
-        session.startGame(facts);                  // ← вместо setCategory
+        session.startGame(ids);
         session.setAwaitingCategoryChoice(false);
         session.resetStats();
 
@@ -101,6 +113,12 @@ public class BelieveGame implements Bot {
         String answer = text.trim().toLowerCase();
         boolean isCorrect;
         Statement current = session.getCurrentStatement();
+
+        // Защита на случай, если вопрос не установился
+        if (current == null) {
+            platform.sendMessage(userId, "Ошибка: вопрос не найден. Выбери категорию заново (/category).");
+            return;
+        }
 
         if (answer.equals("верю")) {
             isCorrect = current.isTrue();
@@ -142,11 +160,19 @@ public class BelieveGame implements Bot {
     }
 
     private void startNewRound(String userId, userSession session) {
+        // Так как добавлено зацикливание, hasStatements() вернет false только если база фактов совсем пуста
         if (!session.hasStatements()) {
-            platform.sendMessage(userId, "Нет ни одного факта для игры. Завершаю работу.");
+            platform.sendMessage(userId, "Нет фактов для игры. Завершаю работу.");
             return;
         }
+
         Statement next = session.getNextStatement();
+
+        if (next == null) {
+            platform.sendMessage(userId, "Не удалось загрузить вопрос.");
+            return;
+        }
+
         session.setCurrentStatement(next);
         platform.sendMessage(userId, next.getText() + "\nВерите? (верю/не верю)");
     }
