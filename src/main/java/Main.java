@@ -1,34 +1,27 @@
 import logic.BelieveGame;
 import view.BotPlatform;
-import view.LocalChatPlatform;
-
-import java.util.Scanner;
+import view.TelegramPlatform;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 public class Main {
     public static void main(String[] args) {
-        //Создаем платформу для консоли
-        //Был view который ждал ввода пользователя
-        //Тк переделано для бота, кdоторый не висит в ожидании
-        //то платформ умеет только отправлять ответы
-        BotPlatform platform = new LocalChatPlatform();
+        try {
+            // 1. Создаём игру (пока без платформы, передадим позже)
+            BelieveGame game = new BelieveGame(null);
 
-        BelieveGame game = new BelieveGame(platform);
-        Scanner scanner = new Scanner(System.in);
-        String userId = "LocalUser"; //В консоли один пользователь
+            // 2. Создаём Telegram-платформу и передаём ей игру
+            String botUsername = "my_believe_game_bot"; // ВАШ username бота (без @)
+            TelegramPlatform platform = new TelegramPlatform(game, botUsername);
 
-        System.out.println("Добро пожаловать в консольную игру!");
-        System.out.println("Введите любое сообщение, чтобы начать (или /exit для выхода).");
+            // 3. Регистрируем бота в Telegram
+            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+            botsApi.registerBot(platform);
 
-        while (true) {
-            String input = scanner.nextLine();
-
-            if (input.equalsIgnoreCase("/exit") || input.equalsIgnoreCase("\\exit")) {
-                System.out.println("Выход из игры. Пока!");
-                break;
-            }
-
-            //Передаем ввод в игру
-            game.onMessageReceived(userId, input);
+            System.out.println("Бот запущен! Напишите ему в Telegram: @" + botUsername);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 }
