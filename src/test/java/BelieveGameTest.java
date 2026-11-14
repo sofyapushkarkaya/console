@@ -1,5 +1,4 @@
 import logic.BelieveGame;
-import model.Statement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import view.BotPlatform;
@@ -15,10 +14,6 @@ class FakeBotPlatform implements BotPlatform {
     public void sendMessage(String userId, String text) {
         messages.add(userId + ": " + text);
     }
-    @Override
-    public void sendHelp(String userId) {
-        messages.add(userId + ": HELP");
-    }
 }
 
 public class BelieveGameTest {
@@ -28,14 +23,7 @@ public class BelieveGameTest {
     @BeforeEach
     public void setUp() {
         fakePlatform = new FakeBotPlatform();
-
-        // Создаем репозиторий с тремя ЛОЖНЫМИ фактами
-        FakeStatementRepository fakeRepo = new FakeStatementRepository();
-        fakeRepo.addStatement(new Statement("Ложь 1", false, "Это ложь", "Животные"));
-        fakeRepo.addStatement(new Statement("Ложь 2", false, "Это ложь", "Животные"));
-        fakeRepo.addStatement(new Statement("Ложь 3", false, "Это ложь", "Животные"));
-
-        game = new BelieveGame(fakeRepo, fakePlatform);
+        game = new BelieveGame(fakePlatform);
     }
 
     @Test
@@ -53,10 +41,24 @@ public class BelieveGameTest {
         // Очищаем историю, чтобы проверять только ответы
         fakePlatform.messages.clear();
 
-        // 2. Вася ошибается 3 раза подряд (отвечает "верю" на ложные факты)
-        game.onMessageReceived("Вася", "верю"); // Ошибка 1
-        game.onMessageReceived("Вася", "верю"); // Ошибка 2
-        game.onMessageReceived("Вася", "верю"); // Ошибка 3
+        // 2. Заставляем Васю ошибаться 3 раза подряд.
+        // Для этого смотрим, какой факт ему выпал, и отвечаем НАОБОРОТ.
+        for (int i = 0; i < 3; i++) {
+            // Достаем последнее сообщение, которое игра отправила Васе
+            String lastMessageToVasya = fakePlatform.messages.stream()
+                    .filter(m -> m.startsWith("Вася: "))
+                    .reduce((first, second) -> second) // берем последнее
+                    .orElse("");
+
+            String wrongAnswer;
+            if (lastMessageToVasya.contains("день пауков")) {
+                wrongAnswer = "верю";
+            } else {
+                wrongAnswer = "не верю";
+            }
+
+            game.onMessageReceived("Вася", wrongAnswer);
+        }
 
         // Проверяем, что Вася проиграл
         assertTrue(fakePlatform.messages.stream().anyMatch(m -> m.contains("3 ошибки подряд")), "Вася должен был проиграть");
