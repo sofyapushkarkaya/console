@@ -13,7 +13,6 @@ public class userSession {
 
     private List<Integer> unaskedIds;
     private List<Integer> askedIds;
-    private int currentStatementId = -1;
 
     private Statement currentStatement;
     private int correctAnswers = 0;
@@ -28,14 +27,12 @@ public class userSession {
     public void startGame(List<Integer> availableIds) {
         this.unaskedIds = new ArrayList<>(availableIds);
         this.askedIds = new ArrayList<>();
-        this.currentStatementId = -1;
         this.currentStatement = null;
     }
 
     public void resetGame() {
         this.unaskedIds = null;
         this.askedIds = null;
-        this.currentStatementId = -1;
         this.currentStatement = null;
         this.awaitingCategoryChoice = true;
     }
@@ -61,7 +58,6 @@ public class userSession {
 
         int nextId = unaskedIds.remove(0);
         askedIds.add(nextId);
-        currentStatementId = nextId;
 
         currentStatement = StatementData.getStatementById(nextId);
         return currentStatement;
