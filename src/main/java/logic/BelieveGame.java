@@ -31,6 +31,29 @@ public class BelieveGame implements Bot {
             return;
         }
 
+        //рестарт
+        if (text.equalsIgnoreCase("/restart") || text.equalsIgnoreCase("\\restart")) {
+            if (session.isGameStarted()) {
+                // Показываем итоговую статистику перед сбросом
+                platform.sendMessage(userId, "Игра перезапущена!");
+                printFinalStatistics(userId, session);
+            }
+            session.resetGame();
+            platform.sendMessage(userId, "Привет! Выбери категорию:");
+            selectCategory(userId, session);
+            return;
+        }
+
+        //статистика
+        if (text.equalsIgnoreCase("/stats") || text.equalsIgnoreCase("\\stats")) {
+            if (session.isGameStarted()) {
+                printFinalStatistics(userId, session);
+            } else {
+                platform.sendMessage(userId, "Вы еще не начали игру. Напишите /category или просто выберите категорию.");
+            }
+            return;
+        }
+
         // Обработка команды смены категории
         if (isCategoryCommand(text)) {
             session.resetGame();
