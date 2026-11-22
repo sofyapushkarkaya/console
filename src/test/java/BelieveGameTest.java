@@ -14,6 +14,12 @@ class FakeBotPlatform implements BotPlatform {
     public void sendMessage(String userId, String text) {
         messages.add(userId + ": " + text);
     }
+
+    public void sendQuestionWithButtons(String userId, String questionText) {
+        // В тестах нам не нужны кнопки, поэтому мы просто
+        // сохраняем текст вопроса в список, как и в sendMessage.
+        messages.add(userId + ": " + questionText);
+    }
 }
 
 public class BelieveGameTest {
