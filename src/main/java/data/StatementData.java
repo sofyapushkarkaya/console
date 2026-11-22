@@ -2,6 +2,8 @@ package data;
 
 import model.Statement;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,26 +13,67 @@ public class StatementData {
 
     private static final Map<Integer, Statement> statementsById = new HashMap<>();
     private static final Map<String, List<Integer>> idsByCategory = new HashMap<>();
+    private static final String FILE_NAME = "facts.txt";
 
     static {
-        statementsById.put(1, new Statement("Осьминог чувствует вкус щупальцами", true, "На каждой присоске — рецепторы вкуса.", "Животные"));
-        statementsById.put(2, new Statement("Если акула перестанет двигаться, она задохнётся.", true, "Многие виды акул должны постоянно плыть, чтобы вода проходила через жабры.", "Животные"));
-        statementsById.put(3, new Statement("В Австралии есть официальный «день пауков» — когда их нельзя убивать.", false, "Такого дня нет. Но есть законы о защите некоторых видов.", "Животные"));
-        statementsById.put(4, new Statement("Бананы радиоактивны", true, "Из-за калия-40. Доза микроскопическая, но физически — да.", "Наука"));
-        statementsById.put(5, new Statement("Первый жёсткий диск весил больше тонны", true, "IBM 350 (1956) весил ~1 тонну и хранил всего 5 МБ.", "Наука"));
-        statementsById.put(6, new Statement("Первый iPhone не умел копировать и вставлять текст.", true, "Копирование появилось только в iPhone 3GS в 2009 году.", "Техника"));
+        loadFromFile();
 
-        List<Integer> allIds = new ArrayList<>();
-
-        for (Map.Entry<Integer, Statement> entry : statementsById.entrySet()) {
-            int id = entry.getKey();
-            String category = entry.getValue().getCategory();
-
-            idsByCategory.computeIfAbsent(category, k -> new ArrayList<>()).add(id);
-            allIds.add(id);
+        //проверка на пустоту
+        if (statementsById.isEmpty()) {
+            System.out.println("Факты не найдены. Как только админы выспятся, сразу же решат вашу проблему. А пока попробуйте просто выйти и зайти нормально, вдруг прокатит");
+            // System.exit(0);
         }
+    }
 
-        idsByCategory.put("Все", allIds);
+    public static void addNewStatement(Statement statement) {
+        int newId = statementsById.keySet().stream().max(Integer::compare).orElse(0) + 1;
+        statementsById.put(newId, statement);
+
+        String category = statement.getCategory();
+        idsByCategory.computeIfAbsent(category, k -> new ArrayList<>()).add(newId);
+        idsByCategory.computeIfAbsent("Все", k -> new ArrayList<>()).add(newId);
+
+        saveToFile(); // Сохраняем после каждого добавления
+    }
+
+    private static void saveToFile() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_NAME, StandardCharsets.UTF_8))) {
+            for (Map.Entry<Integer, Statement> entry : statementsById.entrySet()) {
+                Statement s = entry.getValue();
+                String line = entry.getKey() + " | " + s.getCategory() + " | " + s.getText() + " | " + s.isTrue() + " | " + s.getExplanation();
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Ошибка сохранения в файл: " + e.getMessage());
+        }
+    }
+
+    private static void loadFromFile() {
+        File file = new File(FILE_NAME);
+        if (!file.exists()) return;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\s*\\|\\s*");
+                if (parts.length == 5) {
+                    int id = Integer.parseInt(parts[0].trim());
+                    String category = parts[1].trim();
+                    String text = parts[2].trim();
+                    boolean isTrue = Boolean.parseBoolean(parts[3].trim());
+                    String explanation = parts[4].trim();
+
+                    Statement s = new Statement(text, isTrue, explanation, category);
+                    statementsById.put(id, s);
+
+                    idsByCategory.computeIfAbsent(category, k -> new ArrayList<>()).add(id);
+                    idsByCategory.computeIfAbsent("Все", k -> new ArrayList<>()).add(id);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка чтения из файла: " + e.getMessage());
+        }
     }
 
     public static Statement getStatementById(int id) {
