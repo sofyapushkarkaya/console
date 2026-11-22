@@ -10,7 +10,7 @@ public class MainTelegram {
             // 1. Создаем игру без платформы
             BelieveGame game = new BelieveGame(null);
 
-            // 2. Создаем Telegram-платформу (не забудьте про токен и username)
+            // 2. Создаем Telegram-платформу
             String botUsername = "my_believe_game_bot";
             TelegramPlatform platform = new TelegramPlatform(game, botUsername);
 

@@ -164,6 +164,13 @@ public class BelieveGame implements Bot {
             return;
         }
 
+        if (answer.equals("сдаюсь")) {
+            platform.sendMessage(userId, "Вы сдались! Игра окончена.");
+            printFinalStatistics(userId, session);
+            sessions.remove(userId);
+            return;
+        }
+
         if (answer.equals("верю")) {
             isCorrect = current.isTrue();
         } else if (answer.equals("не верю") || answer.equals("неверю")) {
@@ -217,7 +224,7 @@ public class BelieveGame implements Bot {
         }
 
         session.setCurrentStatement(next);
-        platform.sendMessage(userId, next.getText() + "\nВерите? (верю/не верю)");
+        platform.sendQuestionWithButtons(userId, next.getText());
     }
 
     private void printFinalStatistics(String userId, userSession session) {
