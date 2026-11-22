@@ -85,6 +85,6 @@ public class StatementData {
     }
 
     public static List<String> getAllCategories() {
-        return List.of("Животные", "Наука", "Техника");
+        return List.of("Животные", "Наука", "Техника", "Для тестов");
     }
 }
