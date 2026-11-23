@@ -39,9 +39,13 @@ public class BelieveGame implements Bot {
 
         // 3. Проверка на добавление факта
         if (text.equalsIgnoreCase("/add_fact") || text.equalsIgnoreCase("\\add_fact")) {
-            session.setAddFactStep(1); // Начинаем первый шаг
-            platform.sendMessage(userId, "Шаг 1/4. Выберите категорию (напишите номер):\n" +
-                    "1. Животные\n2. Наука\n3. Техника");
+            session.setAddFactStep(1);
+            List<String> categories = StatementData.getAllCategories();
+            StringBuilder sb = new StringBuilder("Шаг 1/4. Выберите категорию (напишите номер):\n");
+            for (int i = 0; i < categories.size(); i++) {
+                sb.append(i + 1).append(". ").append(categories.get(i)).append("\n");
+            }
+            platform.sendMessage(userId, sb.toString().trim());
             return;
         }
 
