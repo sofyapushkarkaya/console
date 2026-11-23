@@ -7,7 +7,7 @@ public class LocalChatPlatform implements BotPlatform {
     }
 
     public void sendQuestionWithButtons(String userId, String questionText) {
-        System.out.println("[Бот -> " + userId + "]: " + questionText);
+        sendMessage(userId, questionText); // Делегируем вызов
     }
     //Здесь приписка "[Бот -> " + userId + "]Э нужна, что бы на выводе\тестах
     //было понятно кому адресовано соо
