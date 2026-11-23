@@ -4,9 +4,9 @@ public class Statement {
     private final String text;
     private final boolean isTrue;
     private final String explanation;
-    private final Category category;
+    private final String category;
 
-    public Statement(String text, boolean isTrue, String explanation, Category category) {
+    public Statement(String text, boolean isTrue, String explanation, String category) {
         this.text = text;
         this.isTrue = isTrue;
         this.explanation = explanation;
@@ -25,7 +25,7 @@ public class Statement {
         return explanation;
     }
 
-    public Category getCategory() {
+    public String getCategory() {
         return category;
     }
 }
