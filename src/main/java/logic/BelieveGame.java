@@ -1,6 +1,7 @@
 package logic;
 
 import data.StatementData;
+import model.Category;
 import model.Statement;
 import view.BotPlatform;
 
@@ -16,7 +17,7 @@ public class BelieveGame implements Bot {
         this.platform = platform;
     }
 
-    //сеттер новенькиц
+    // сеттер новенький
     public void setPlatform(BotPlatform platform) {
         this.platform = platform;
     }
@@ -25,34 +26,30 @@ public class BelieveGame implements Bot {
     public void onMessageReceived(String userId, String text) {
         userSession session = sessions.computeIfAbsent(userId, userSession::new);
 
-        // 1. Проверка на выход
+        // 1. Выход — работает всегда
         if (isExitCommand(text)) {
             platform.sendMessage(userId, "Спасибо за игру! Пока!");
             sessions.remove(userId);
             return;
         }
 
-        // 2. Проверка на справку
+        // 2. Справка — работает всегда
         if (isHelpCommand(text)) {
             platform.sendMessage(userId, "Я - бот 'Верю/Не верю'. Отвечай 'верю' или 'не верю'. Команды: \\help, \\exit, \\category (сменить категорию), \\stats (статистика), \\restart (перезапуск), \\add_fact (добавить факт).");
             return;
         }
 
-        // 3. Проверка на добавление факта
-        if (text.equalsIgnoreCase("/add_fact") || text.equalsIgnoreCase("\\add_fact")) {
-            session.setAddFactStep(1); // Начинаем первый шаг
-            platform.sendMessage(userId, "Шаг 1/4. Выберите категорию (напишите номер):\n" +
-                    "1. Животные\n2. Наука\n3. Техника");
+        // 3. Статистика — работает всегда
+        if (text.equalsIgnoreCase("/stats") || text.equalsIgnoreCase("\\stats")) {
+            if (session.isGameStarted()) {
+                printFinalStatistics(userId, session);
+            } else {
+                platform.sendMessage(userId, "Вы еще не начали игру. Напишите /category или просто выберите категорию.");
+            }
             return;
         }
 
-        // 4. Обработка шагов добавления факта (если процесс запущен)
-        if (session.getAddFactStep() > 0) {
-            handleAddFactSteps(userId, text, session);
-            return;
-        }
-
-        // 5. Проверка на рестарт
+        // 4. Рестарт — работает всегда
         if (text.equalsIgnoreCase("/restart") || text.equalsIgnoreCase("\\restart")) {
             if (session.isGameStarted()) {
                 platform.sendMessage(userId, "Игра перезапущена!");
@@ -64,17 +61,7 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        // 6. Проверка на статистику
-        if (text.equalsIgnoreCase("/stats") || text.equalsIgnoreCase("\\stats")) {
-            if (session.isGameStarted()) {
-                printFinalStatistics(userId, session);
-            } else {
-                platform.sendMessage(userId, "Вы еще не начали игру. Напишите /category или просто выберите категорию.");
-            }
-            return;
-        }
-
-        // 7. Проверка на смену категории
+        // 5. Смена категории — работает всегда
         if (isCategoryCommand(text)) {
             session.resetGame();
             platform.sendMessage(userId, "Выбери новую категорию:");
@@ -82,20 +69,39 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        // 8. Если ждем выбора категории
+        // 6. Добавление факта — только если не в процессе добавления
+        if (session.getAddFactStep() == 0
+                && (text.equalsIgnoreCase("/add_fact") || text.equalsIgnoreCase("\\add_fact"))) {
+            List<Category> addable = StatementData.getAddableCategories();
+            if (addable.isEmpty()) {
+                platform.sendMessage(userId, "Нет доступных категорий для добавления фактов.");
+                return;
+            }
+            session.setAddFactStep(1);
+            showAddFactCategoryMenu(userId);
+            return;
+        }
+
+        // 7. Шаги добавления факта — если процесс запущен
+        if (session.getAddFactStep() > 0) {
+            handleAddFactSteps(userId, text, session);
+            return;
+        }
+
+        // 8. Ожидание выбора категории
         if (session.isAwaitingCategoryChoice()) {
             handleCategoryChoice(userId, text, session);
             return;
         }
 
-        // 9. Если игра еще не начата
+        // 9. Игра ещё не начата
         if (!session.isGameStarted()) {
             platform.sendMessage(userId, "Привет! Выбери категорию:");
             selectCategory(userId, session);
             return;
         }
 
-        // 10. Обработка ответа на факт
+        // 10. Ответ на факт
         handleAnswer(userId, text, session);
     }
 
@@ -114,30 +120,33 @@ public class BelieveGame implements Bot {
 
     private void selectCategory(String userId, userSession session) {
         List<String> categories = StatementData.getAllCategories();
+        if (categories.size() <= 1) { // только "Все" — фактов нет
+            platform.sendMessage(userId, "Пока нет ни одного факта. Попробуйте позже.");
+            return;
+        }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < categories.size(); i++) {
             sb.append(i + 1).append(". ").append(categories.get(i)).append("\n");
         }
-        sb.append(categories.size() + 1).append(". Все");
-        platform.sendMessage(userId, sb.toString());
+        platform.sendMessage(userId, sb.toString().trim());
         session.setAwaitingCategoryChoice(true);
     }
 
     private void handleCategoryChoice(String userId, String text, userSession session) {
         List<String> categories = StatementData.getAllCategories();
-        String categoryName = "Все";
         int choice;
-
         try {
             choice = Integer.parseInt(text.trim());
         } catch (NumberFormatException e) {
             platform.sendMessage(userId, "Неверный ввод. Играю со всеми фактами.");
-            choice = categories.size() + 1;
+            choice = categories.size(); // "Все" — последний пункт
         }
 
-        if (choice >= 1 && choice <= categories.size()) {
-            categoryName = categories.get(choice - 1);
+        if (choice < 1 || choice > categories.size()) {
+            choice = categories.size(); // неверный номер → "Все"
         }
+
+        String categoryName = categories.get(choice - 1);
 
         // Получаем ТОЛЬКО ID вопросов, сами объекты не копируем
         List<Integer> ids = StatementData.getStatementIdsByCategory(categoryName);
@@ -228,7 +237,7 @@ public class BelieveGame implements Bot {
     }
 
     private void printFinalStatistics(String userId, userSession session) {
-        platform.sendMessage(userId, "----------СТАТИСТИКА:");
+        platform.sendMessage(userId, "статистика:");
         platform.sendMessage(userId, "У вас " + session.getCorrectAnswers() + " из "
                 + session.getTotalAnswers() + " правильных ответов.");
         if (session.getTotalAnswers() > 0) {
@@ -238,31 +247,45 @@ public class BelieveGame implements Bot {
         }
     }
 
+    private void showAddFactCategoryMenu(String userId) {
+        List<Category> addable = StatementData.getAddableCategories();
+        StringBuilder sb = new StringBuilder("Шаг 1/4. Выберите категорию (напишите номер):\n");
+        for (int i = 0; i < addable.size(); i++) {
+            sb.append(i + 1).append(". ").append(addable.get(i).displayName());
+            if (i < addable.size() - 1) sb.append("\n");
+        }
+        platform.sendMessage(userId, sb.toString());
+    }
+
     private void handleAddFactSteps(String userId, String text, userSession session) {
         int step = session.getAddFactStep();
 
         if (step == 1) {
-            //Категория
-            List<String> categories = StatementData.getAllCategories();
+            List<Category> addable = StatementData.getAddableCategories();
+            if (addable.isEmpty()) {
+                platform.sendMessage(userId, "Нет доступных категорий для добавления фактов.");
+                session.setAddFactStep(0);
+                return;
+            }
+
             int choice;
             try {
                 choice = Integer.parseInt(text.trim());
             } catch (NumberFormatException e) {
-                platform.sendMessage(userId, "Введите номер категории (1, 2 или 3):");
+                platform.sendMessage(userId, "Введите номер категории (от 1 до " + addable.size() + "):");
                 return;
             }
 
-            if (choice < 1 || choice > categories.size()) {
-                platform.sendMessage(userId, "Неверный номер. Введите 1, 2 или 3:");
+            if (choice < 1 || choice > addable.size()) {
+                platform.sendMessage(userId, "Неверный номер. Введите от 1 до " + addable.size() + ":");
                 return;
             }
 
-            session.setTempCategory(categories.get(choice - 1));
+            session.setTempCategory(addable.get(choice - 1));
             session.setAddFactStep(2);
             platform.sendMessage(userId, "Шаг 2/4. Введите текст факта (например, 'Пингвины летают'):");
         }
         else if (step == 2) {
-            //сам факт
             if (text.trim().isEmpty()) {
                 platform.sendMessage(userId, "Текст не может быть пустым. Введите текст факта:");
                 return;
@@ -272,7 +295,6 @@ public class BelieveGame implements Bot {
             platform.sendMessage(userId, "Шаг 3/4. Это правда или ложь? (напишите 'правда' или 'ложь'):");
         }
         else if (step == 3) {
-            //правда/Ложь
             String input = text.trim().toLowerCase();
             if (input.equals("правда") || input.equals("true")) {
                 session.setTempIsTrue(true);
@@ -286,27 +308,25 @@ public class BelieveGame implements Bot {
             platform.sendMessage(userId, "Шаг 4/4. Введите пояснение (почему это так?):");
         }
         else if (step == 4) {
-            //пояснение
             if (text.trim().isEmpty()) {
                 platform.sendMessage(userId, "Пояснение не может быть пустым. Введите пояснение:");
                 return;
             }
 
-            //Создаем факт и сохраняем
             Statement newStatement = new Statement(
                     session.getTempFactText(),
                     session.isTempIsTrue(),
                     text.trim(),
-                    session.getTempCategory()
+                    session.getTempCategory() // Category
             );
             StatementData.addNewStatement(newStatement);
 
-            //Сбрасываем состояние
             session.setAddFactStep(0);
             session.setTempFactText(null);
             session.setTempCategory(null);
 
-            platform.sendMessage(userId, "Факт успешно добавлен в категорию '" + newStatement.getCategory() + "'!");
+            platform.sendMessage(userId, "Факт успешно добавлен в категорию '"
+                    + newStatement.getCategory().displayName() + "'!");
         }
     }
 }
