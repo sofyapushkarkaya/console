@@ -4,7 +4,7 @@ import view.LocalChatPlatform;
 
 import java.util.Scanner;
 
-public class Main {
+public class MainConsole {
     public static void main(String[] args) {
         //Создаем платформу для консоли
         //Был view который ждал ввода пользователя
