@@ -1,8 +1,8 @@
 package view;
+import model.Question;
 
 public interface BotPlatform {
     void sendMessage(String userId, String text);
 
-    //метод для вопросов с кнопками
-    void sendQuestionWithButtons(String userId, String questionText);
+    void sendQuestionWithButtons(String userId, Question question);
 }

@@ -1,6 +1,8 @@
 package view;
 
 import logic.BelieveGame;
+import model.Answer;
+import model.Question;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -29,7 +31,6 @@ public class TelegramPlatform extends TelegramLongPollingBot implements BotPlatf
 
     @Override
     public String getBotToken() {
-        // Читаем токен из переменной окружения BOT_TOKEN
         String token = System.getenv("BOT_TOKEN");
         if (token == null || token.isEmpty()) {
             throw new IllegalStateException("Не задана переменная окружения BOT_TOKEN! Настройте её в Run Configuration.");
@@ -44,12 +45,8 @@ public class TelegramPlatform extends TelegramLongPollingBot implements BotPlatf
             String text = update.getMessage().getText();
             game.onMessageReceived(userId, text);
         }
-
         else if (update.hasCallbackQuery()) {
-            // Получаем ID чата (пользователя)
             String userId = update.getCallbackQuery().getMessage().getChatId().toString();
-
-            // Получаем данные, которые мы зашили в кнопку (например, "answer_верю")
             String callbackData = update.getCallbackQuery().getData();
             String answer = callbackData.replace("answer_", "");
             try {
@@ -57,7 +54,6 @@ public class TelegramPlatform extends TelegramLongPollingBot implements BotPlatf
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
-            // Передаем ответ в игру, как будто пользователь написал это текстом
             game.onMessageReceived(userId, answer);
         }
     }
@@ -75,37 +71,32 @@ public class TelegramPlatform extends TelegramLongPollingBot implements BotPlatf
     }
 
     @Override
-    public void sendQuestionWithButtons(String userId, String questionText) {
+    public void sendQuestionWithButtons(String userId, Question question) {
         SendMessage message = new SendMessage();
         message.setChatId(userId);
-        message.setText(questionText);
+        message.setText(question.question());
 
-        // Создаем разметку для кнопок
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
 
-        // Кнопка "Верю"
-        InlineKeyboardButton btnTrue = new InlineKeyboardButton();
-        btnTrue.setText("✅ Верю");
-        btnTrue.setCallbackData("answer_верю"); // Данные, которые придут боту
+        for (Answer ans : question.answers()) {
+            InlineKeyboardButton btn = new InlineKeyboardButton();
 
-        // Кнопка "Не верю"
-        InlineKeyboardButton btnFalse = new InlineKeyboardButton();
-        btnFalse.setText("❌ Не верю");
-        btnFalse.setCallbackData("answer_не верю");
+            String emoji = switch (ans.emoji()) {
+                case OK -> "✅ ";
+                case CROSS -> "❌ ";
+                case GIVEUP -> "🏳️ ";
+            };
 
-        // Кнопка "Сдаюсь"
-        InlineKeyboardButton btnSurrender = new InlineKeyboardButton();
-        btnSurrender.setText("🏳️ Сдаюсь");
-        btnSurrender.setCallbackData("answer_сдаюсь");
+            btn.setText(emoji + ans.answer());
+            btn.setCallbackData("answer_" + ans.answer().toLowerCase());
 
-        row.add(btnTrue);
-        row.add(btnFalse);
-        row.add(btnSurrender);
+            row.add(btn);
+        }
+
         rows.add(row);
         markup.setKeyboard(rows);
-
         message.setReplyMarkup(markup);
 
         try {
