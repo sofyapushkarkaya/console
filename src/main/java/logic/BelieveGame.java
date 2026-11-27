@@ -50,7 +50,7 @@ public class BelieveGame implements Bot {
 
         // 3. Проверка на добавление факта
         if (text.equalsIgnoreCase("/add_fact") || text.equalsIgnoreCase("\\add_fact")) {
-            session.setAddFactStep(1);
+            session.setAddFactStep(FactStep.CATEGORY);
             List<String> categories = StatementData.getAllCategories();
             StringBuilder sb = new StringBuilder("Шаг 1/4. Выберите категорию (напишите номер):\n");
             for (int i = 0; i < categories.size(); i++) {
@@ -61,7 +61,7 @@ public class BelieveGame implements Bot {
         }
 
         // 4. Обработка шагов добавления факта (если процесс запущен)
-        if (session.getAddFactStep() > 0) {
+        if (session.getAddFactStep() != FactStep.DO_NOTHING) {
             handleAddFactSteps(userId, text, session);
             return;
         }
@@ -261,9 +261,9 @@ public class BelieveGame implements Bot {
     }
 
     private void handleAddFactSteps(String userId, String text, userSession session) {
-        int step = session.getAddFactStep();
+        FactStep step = session.getAddFactStep();
 
-        if (step == 1) {
+        if (step == FactStep.CATEGORY) {
             List<String> categories = StatementData.getAllCategories();
             int choice;
             try {
@@ -279,19 +279,19 @@ public class BelieveGame implements Bot {
             }
 
             session.setTempCategory(categories.get(choice - 1));
-            session.setAddFactStep(2);
+            session.setAddFactStep(FactStep.TEXT);
             platform.sendMessage(userId, "Шаг 2/4. Введите текст факта (например, 'Пингвины летают'):");
         }
-        else if (step == 2) {
+        else if (step == FactStep.TEXT) {
             if (text.trim().isEmpty()) {
                 platform.sendMessage(userId, "Текст не может быть пустым. Введите текст факта:");
                 return;
             }
             session.setTempFactText(text.trim());
-            session.setAddFactStep(3);
+            session.setAddFactStep(FactStep.TRUTH);
             platform.sendMessage(userId, "Шаг 3/4. Это правда или ложь? (напишите 'правда' или 'ложь'):");
         }
-        else if (step == 3) {
+        else if (step == FactStep.TRUTH) {
             String input = text.trim().toLowerCase();
             if (input.equals("правда") || input.equals("true")) {
                 session.setTempIsTrue(true);
@@ -301,10 +301,10 @@ public class BelieveGame implements Bot {
                 platform.sendMessage(userId, "Напишите 'правда' или 'ложь':");
                 return;
             }
-            session.setAddFactStep(4);
+            session.setAddFactStep(FactStep.EXPLANATION);
             platform.sendMessage(userId, "Шаг 4/4. Введите пояснение (почему это так?):");
         }
-        else if (step == 4) {
+        else if (step == FactStep.EXPLANATION) {
             if (text.trim().isEmpty()) {
                 platform.sendMessage(userId, "Пояснение не может быть пустым. Введите пояснение:");
                 return;
@@ -317,8 +317,7 @@ public class BelieveGame implements Bot {
                     session.getTempCategory()
             );
             StatementData.addNewStatement(newStatement);
-
-            session.setAddFactStep(0);
+            session.setAddFactStep(FactStep.DO_NOTHING);
             session.setTempFactText(null);
             session.setTempCategory(null);
 

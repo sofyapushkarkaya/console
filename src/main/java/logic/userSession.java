@@ -20,8 +20,8 @@ public class userSession {
     private int wrongStreak = 0;
     private boolean awaitingCategoryChoice = false;
 
-    //поэтапное добавление факта
-    private int addFactStep = 0; // 0 - не добавляем, 1 - категория, 2 - текст, 3 - правда/ложь, 4 - пояснение
+    // Поэтапное добавление факта
+    private FactStep addFactStep = FactStep.DO_NOTHING;
     private String tempCategory;
     private String tempFactText;
     private boolean tempIsTrue;
@@ -30,18 +30,38 @@ public class userSession {
         this.userId = userId;
     }
 
-    //геттеры и сеттеры для добавления
-    public int getAddFactStep() { return addFactStep; }
-    public void setAddFactStep(int addFactStep) { this.addFactStep = addFactStep; }
+    // Геттеры и сеттеры для добавления
+    public FactStep getAddFactStep() {
+        return addFactStep;
+    }
 
-    public String getTempCategory() { return tempCategory; }
-    public void setTempCategory(String tempCategory) { this.tempCategory = tempCategory; }
+    public void setAddFactStep(FactStep addFactStep) {
+        this.addFactStep = addFactStep;
+    }
 
-    public String getTempFactText() { return tempFactText; }
-    public void setTempFactText(String tempFactText) { this.tempFactText = tempFactText; }
+    public String getTempCategory() {
+        return tempCategory;
+    }
 
-    public boolean isTempIsTrue() { return tempIsTrue; }
-    public void setTempIsTrue(boolean tempIsTrue) { this.tempIsTrue = tempIsTrue; }
+    public void setTempCategory(String tempCategory) {
+        this.tempCategory = tempCategory;
+    }
+
+    public String getTempFactText() {
+        return tempFactText;
+    }
+
+    public void setTempFactText(String tempFactText) {
+        this.tempFactText = tempFactText;
+    }
+
+    public boolean isTempIsTrue() {
+        return tempIsTrue;
+    }
+
+    public void setTempIsTrue(boolean tempIsTrue) {
+        this.tempIsTrue = tempIsTrue;
+    }
 
     public void startGame(List<Integer> availableIds) {
         this.unaskedIds = new ArrayList<>(availableIds);
@@ -54,9 +74,10 @@ public class userSession {
         this.askedIds = null;
         this.currentStatement = null;
         this.awaitingCategoryChoice = true;
-        this.addFactStep = 0; // Сбрасываем добавление факта
+        this.addFactStep = FactStep.DO_NOTHING; // Сбрасываем добавление факта
         this.tempCategory = null;
         this.tempFactText = null;
+        this.tempIsTrue = false; // Не забываем сбросить и это
     }
 
     public boolean isGameStarted() {
@@ -70,12 +91,11 @@ public class userSession {
     public Statement getNextStatement() {
         if (unaskedIds == null) return null;
 
-        // Если вопросы закончились — начинаем новый круг
         if (unaskedIds.isEmpty()) {
             if (askedIds.isEmpty()) return null;
             unaskedIds = new ArrayList<>(askedIds);
             askedIds.clear();
-            Collections.shuffle(unaskedIds); // перемешиваем, чтобы порядок был другим
+            Collections.shuffle(unaskedIds);
         }
 
         int nextId = unaskedIds.remove(0);
@@ -93,16 +113,34 @@ public class userSession {
         this.currentStatement = currentStatement;
     }
 
-    public int getCorrectAnswers() { return correctAnswers; }
-    public int getTotalAnswers() { return totalAnswers; }
+    public int getCorrectAnswers() {
+        return correctAnswers;
+    }
 
-    public void incrementCorrectAnswers() { this.correctAnswers++; }
-    public void incrementTotalAnswers() { this.totalAnswers++; }
+    public int getTotalAnswers() {
+        return totalAnswers;
+    }
 
-    public int getWrongStreak() { return wrongStreak; }
-    public void setWrongStreak(int wrongStreak) { this.wrongStreak = wrongStreak; }
+    public void incrementCorrectAnswers() {
+        this.correctAnswers++;
+    }
 
-    public boolean isAwaitingCategoryChoice() { return awaitingCategoryChoice; }
+    public void incrementTotalAnswers() {
+        this.totalAnswers++;
+    }
+
+    public int getWrongStreak() {
+        return wrongStreak;
+    }
+
+    public void setWrongStreak(int wrongStreak) {
+        this.wrongStreak = wrongStreak;
+    }
+
+    public boolean isAwaitingCategoryChoice() {
+        return awaitingCategoryChoice;
+    }
+
     public void setAwaitingCategoryChoice(boolean awaitingCategoryChoice) {
         this.awaitingCategoryChoice = awaitingCategoryChoice;
     }
@@ -112,8 +150,4 @@ public class userSession {
         this.totalAnswers = 0;
         this.wrongStreak = 0;
     }
-    //В методе resetGame сброс полей tempCategory и tempFactText,
-    // а также addFactStep = 0
-    // Это гарантирует, что если пользователь начнет добавлять факт,
-    // а потом передумает и напишет /restart, его «черновик» не сохранится и не сломает игру.
 }
