@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.Collections;
 
 public class StatementData {
 
@@ -18,6 +19,7 @@ public class StatementData {
     private static final Map<String, List<Integer>> idsByCategory = new HashMap<>();
     private static final String FILE_NAME = "facts.txt";
     private static final String CATEGORY_ALL = "Все";
+    private static final String CATEGORY_RANDOM = "Случайный факт";
 
     public record LoadResult(int loaded, int skipped, int errors, boolean fileFound) {
         public boolean isOk() {
@@ -134,6 +136,11 @@ public class StatementData {
         if (CATEGORY_ALL.equalsIgnoreCase(category)) {
             return new ArrayList<>(statementsById.keySet());
         }
+        if (CATEGORY_RANDOM.equalsIgnoreCase(category)) {
+            List<Integer> ids = new ArrayList<>(statementsById.keySet());
+            Collections.shuffle(ids);
+            return ids;
+        }
         return idsByCategory.getOrDefault(normalizeCategory(category), List.of());
     }
 
@@ -145,6 +152,7 @@ public class StatementData {
             }
         }
         categories.sort(String.CASE_INSENSITIVE_ORDER);
+        categories.add(CATEGORY_RANDOM);
         categories.add(CATEGORY_ALL);
         return categories;
     }
