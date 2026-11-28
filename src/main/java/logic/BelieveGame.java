@@ -7,13 +7,13 @@ import model.StateEmoji;
 import model.Statement;
 import view.BotPlatform;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BelieveGame implements Bot {
     private BotPlatform platform;
-    private final Map<String, userSession> sessions = new HashMap<>();
+    private final Map<String, userSession> sessions = new ConcurrentHashMap<>();
 
     public BelieveGame(BotPlatform platform) {
         this.platform = platform;
@@ -23,23 +23,44 @@ public class BelieveGame implements Bot {
         this.platform = platform;
     }
 
+    // Для доступа из MainTelegram
+    public Map<String, userSession> getSessions() {
+        return sessions;
+    }
+
+    // Обработка таймаута (вызывается из MainTelegram)
+    public void handleTimeout(String userId, userSession session) {
+        platform.sendMessage(userId, "Время вышло! Вы не успели ответить. Это ошибка.");
+        session.setWrongStreak(session.getWrongStreak() + 1);
+        session.resetTimer();
+
+        if (session.getWrongStreak() >= 1) {
+            platform.sendMessage(userId, "Вы проиграли! Игра окончена.");
+            printFinalStatistics(userId, session);
+            sessions.remove(userId);
+            return;
+        }
+        session.setCurrentStatement(null);
+        startNewRound(userId, session);
+    }
+
     @Override
     public void onMessageReceived(String userId, String text) {
         userSession session = sessions.computeIfAbsent(userId, userSession::new);
 
-        // 1. Проверка на выход
+        // 1. Выход
         if (isExitCommand(text)) {
             platform.sendMessage(userId, "Спасибо за игру! Пока!");
             sessions.remove(userId);
             return;
         }
 
-        // 2. Проверка на справку
+        // 2. Справка
         if (isHelpCommand(text)) {
             String helpText = "Я - бот верю\\не верю\n\n" +
-                    "ПРАВИЛА ИГРЫ:\nнужно отвечать верю или не верю, посмотрим насколько ты доверчивый человек\n\n" +
+                    "ПРАВИЛА ИГРЫ:\nнужно отвечать верю или не верю\n\n" +
                     "КОМАНДЫ:\n" +
-                    "\\start - \"Round 1. Fight\"\n" +
+                    "\\start - начать\n" +
                     "\\help - помощь\n" +
                     "\\exit - выход\n" +
                     "\\category - сменить категорию\n" +
@@ -50,7 +71,7 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        // 3. Проверка на добавление факта
+        // 3. Добавление факта
         if (text.equalsIgnoreCase("/add_fact") || text.equalsIgnoreCase("\\add_fact")) {
             session.setAddFactStep(FactStep.CATEGORY);
             List<String> categories = StatementData.getAllCategories();
@@ -62,13 +83,13 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        // 4. Обработка шагов добавления факта
+        // 4. Шаги добавления факта
         if (session.getAddFactStep() != FactStep.DO_NOTHING) {
             handleAddFactSteps(userId, text, session);
             return;
         }
 
-        // 5. Проверка на рестарт
+        // 5. Рестарт
         if (text.equalsIgnoreCase("/restart") || text.equalsIgnoreCase("\\restart")) {
             if (session.isGameStarted()) {
                 platform.sendMessage(userId, "Игра перезапущена!");
@@ -80,17 +101,17 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        // 6. Проверка на статистику
+        // 6. Статистика
         if (text.equalsIgnoreCase("/stats") || text.equalsIgnoreCase("\\stats")) {
             if (session.isGameStarted()) {
                 printFinalStatistics(userId, session);
             } else {
-                platform.sendMessage(userId, "Вы еще не начали игру. Напишите /category или просто выберите категорию.");
+                platform.sendMessage(userId, "Вы еще не начали игру.");
             }
             return;
         }
 
-        // 7. Проверка на смену категории
+        // 7. Смена категории
         if (isCategoryCommand(text)) {
             session.resetGame();
             platform.sendMessage(userId, "Выбери новую категорию:");
@@ -104,20 +125,20 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        // 9. Если ждем выбора категории
+        // 9. Ожидание выбора категории
         if (session.isAwaitingCategoryChoice()) {
             handleCategoryChoice(userId, text, session);
             return;
         }
 
-        // 10. Если игра еще не начата
+        // 10. Игра не начата
         if (!session.isGameStarted()) {
             platform.sendMessage(userId, "Привет! Выбери категорию:");
             selectCategory(userId, session);
             return;
         }
 
-        // 11. Обработка ответа на факт
+        // 11. Ответ на вопрос
         handleAnswer(userId, text, session);
     }
 
@@ -180,7 +201,6 @@ public class BelieveGame implements Bot {
                 "3. Сложный (1 ошибка + 15 секунд)");
     }
 
-    //обработка выбора сложности
     private void handleDifficultyChoice(String userId, String text, userSession session) {
         int choice;
         try {
@@ -194,7 +214,6 @@ public class BelieveGame implements Bot {
         session.setDifficulty(diff);
         session.setAwaitingDifficultyChoice(false);
 
-        // Восстанавливаем ID по сохраненной категории
         List<Integer> ids = StatementData.getStatementIdsByCategory(session.getTempCategory());
         session.startGame(ids);
         session.resetStats();
@@ -215,14 +234,11 @@ public class BelieveGame implements Bot {
             return;
         }
 
-        //проверка таймера
         if (session.isTimeOut()) {
-            platform.sendMessage(userId, "Время вышло! Вы не успели ответить. Это ошибка.");
+            platform.sendMessage(userId, "⏰ Время вышло! Вы не успели ответить. Это ошибка.");
             session.setWrongStreak(session.getWrongStreak() + 1);
             session.resetTimer();
-
-            if (checkGameOver(session)) return;
-
+            if (checkGameOver(userId, session)) return;
             session.setCurrentStatement(null);
             startNewRound(userId, session);
             return;
@@ -262,15 +278,14 @@ public class BelieveGame implements Bot {
                 platform.sendMessage(userId, "Неверно! Это ложь. " + current.getExplanation());
             }
 
-            if (checkGameOver(session)) return;
+            if (checkGameOver(userId, session)) return;
         }
 
         session.setCurrentStatement(null);
         startNewRound(userId, session);
     }
 
-    //проверка на проигрыш в зависимости от сложности
-    private boolean checkGameOver(userSession session) {
+    private boolean checkGameOver(String userId, userSession session) {
         boolean isGameOver = false;
 
         if (session.getDifficulty() == Difficulty.HARD) {
@@ -278,22 +293,11 @@ public class BelieveGame implements Bot {
         } else if (session.getDifficulty() == Difficulty.NORMAL) {
             if (session.getWrongStreak() >= 3) isGameOver = true;
         }
-        // Для EASY isGameOver всегда false
 
         if (isGameOver) {
-            String userId = null;
-            // Находим userId для этой сессии
-            for (Map.Entry<String, userSession> entry : sessions.entrySet()) {
-                if (entry.getValue() == session) {
-                    userId = entry.getKey();
-                    break;
-                }
-            }
-            if (userId != null) {
-                platform.sendMessage(userId, "Вы проиграли! Игра окончена.");
-                printFinalStatistics(userId, session);
-                sessions.remove(userId);
-            }
+            platform.sendMessage(userId, "Вы проиграли! Игра окончена.");
+            printFinalStatistics(userId, session);
+            sessions.remove(userId);
         }
         return isGameOver;
     }
@@ -318,13 +322,11 @@ public class BelieveGame implements Bot {
 
         Question question = new Question(next.getText(), List.of(ansTrue, ansFalse, ansGiveup));
         platform.sendQuestionWithButtons(userId, question);
-
-        //для каждого нового вопроса - новый таймер
         session.startTimer();
     }
 
     private void printFinalStatistics(String userId, userSession session) {
-        platform.sendMessage(userId, "СТАТИСТИКА:");
+        platform.sendMessage(userId, "----------СТАТИСТИКА:");
         platform.sendMessage(userId, "У вас " + session.getCorrectAnswers() + " из "
                 + session.getTotalAnswers() + " правильных ответов.");
         if (session.getTotalAnswers() > 0) {
@@ -353,8 +355,7 @@ public class BelieveGame implements Bot {
             session.setTempCategory(categories.get(choice - 1));
             session.setAddFactStep(FactStep.TEXT);
             platform.sendMessage(userId, "Шаг 2/4. Введите текст факта:");
-        }
-        else if (step == FactStep.TEXT) {
+        } else if (step == FactStep.TEXT) {
             if (text.trim().isEmpty()) {
                 platform.sendMessage(userId, "Текст не может быть пустым.");
                 return;
@@ -362,8 +363,7 @@ public class BelieveGame implements Bot {
             session.setTempFactText(text.trim());
             session.setAddFactStep(FactStep.TRUTH);
             platform.sendMessage(userId, "Шаг 3/4. Это правда или ложь?");
-        }
-        else if (step == FactStep.TRUTH) {
+        } else if (step == FactStep.TRUTH) {
             String input = text.trim().toLowerCase();
             if (input.equals("правда") || input.equals("true")) {
                 session.setTempIsTrue(true);
@@ -375,8 +375,7 @@ public class BelieveGame implements Bot {
             }
             session.setAddFactStep(FactStep.EXPLANATION);
             platform.sendMessage(userId, "Шаг 4/4. Введите пояснение:");
-        }
-        else if (step == FactStep.EXPLANATION) {
+        } else if (step == FactStep.EXPLANATION) {
             if (text.trim().isEmpty()) {
                 platform.sendMessage(userId, "Пояснение не может быть пустым.");
                 return;

@@ -54,7 +54,7 @@ public class userSession {
     public boolean isAwaitingDifficultyChoice() { return awaitingDifficultyChoice; }
     public void setAwaitingDifficultyChoice(boolean awaitingDifficultyChoice) { this.awaitingDifficultyChoice = awaitingDifficultyChoice; }
 
-    // --- МЕТОДЫ ДЛЯ ТАЙМЕРА ---
+    // --- ТАЙМЕР ---
 
     public void startTimer() {
         this.questionStartTime = System.currentTimeMillis();
@@ -64,7 +64,7 @@ public class userSession {
         if (difficulty != Difficulty.HARD) return false;
         if (questionStartTime == 0) return false;
         long elapsed = System.currentTimeMillis() - questionStartTime;
-        return elapsed > 15000; // 15 секунд
+        return elapsed > 15000;
     }
 
     public void resetTimer() {
@@ -86,7 +86,6 @@ public class userSession {
         this.addFactStep = FactStep.DO_NOTHING;
         this.tempFactText = null;
         this.tempIsTrue = false;
-
         this.difficulty = Difficulty.NORMAL;
         this.awaitingDifficultyChoice = false;
         this.tempCategory = null;
